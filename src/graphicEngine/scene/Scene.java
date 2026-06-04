@@ -1,6 +1,9 @@
 package graphicEngine.scene;
 
 import graphicEngine.math.geometry.Mesh;
+import graphicEngine.renderer.Texture;
+import org.w3c.dom.Text;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,6 +12,7 @@ import java.util.Map;
 public class Scene {
     public record ObjectData(String name, String meshName) {}
     private final Map<String, Mesh> meshLibrary;
+    private final Map<String, Texture> textureLibrary;
     private final Map<String, GameObject> gameObjectLibrary;
     private final List<GameObject> renderQueue;
 
@@ -16,6 +20,7 @@ public class Scene {
     public Scene() {
         this.renderQueue = new ArrayList<>();
         this.meshLibrary = new HashMap<>();
+        this.textureLibrary = new HashMap<>();
         this.gameObjectLibrary = new HashMap<>();
     }
 
@@ -64,12 +69,25 @@ public class Scene {
         this.meshLibrary.put(meshName,mesh);
     }
 
+    public void addTexture(String textureName, Texture texture) {
+        texture.setTextureName(textureName);
+        this.textureLibrary.put(textureName,texture);
+    }
+
     public GameObject getGameObject(String name) {
         return this.gameObjectLibrary.get(name);
     }
 
     public Map<String, Mesh> getMeshLibrary() {
         return meshLibrary;
+    }
+
+    public Map<String, Texture> getTextureLibrary() {
+        return textureLibrary;
+    }
+
+    public Map<String, GameObject> getGameObjectLibrary() {
+        return gameObjectLibrary;
     }
 
     public List<GameObject> getRenderQueue() {

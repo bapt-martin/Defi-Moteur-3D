@@ -3,9 +3,12 @@ package graphicEngine.scene;
 import graphicEngine.math.geometry.Mesh;
 import graphicEngine.math.tools.Matrix;
 import graphicEngine.math.tools.Vector3D;
+import graphicEngine.renderer.Texture;
+import org.w3c.dom.Text;
 
 public class GameObject {
     private Mesh mesh;
+    private Texture texture;
     private Matrix worldTransformMatrix;
     private String name;
     private int id;
@@ -19,6 +22,16 @@ public class GameObject {
 
     public GameObject(Mesh mesh) {
         this.mesh = mesh;
+        this.texture  = null;
+        this.scale    = new Vector3D(1,1,1);
+        this.rotation = new Vector3D();
+        this.position = new Vector3D();
+        this.updateWorldTransformMatrix();
+    }
+
+    public GameObject(Mesh mesh, Texture texture) {
+        this.mesh = mesh;
+        this.texture = texture;
         this.scale    = new Vector3D(1,1,1);
         this.rotation = new Vector3D();
         this.position = new Vector3D();
@@ -34,32 +47,44 @@ public class GameObject {
     }
 
     public void setScale(double x, double y, double z) {
-        this.scale = new Vector3D(x, y, z);
+        this.scale.setX(x);
+        this.scale.setY(y);
+        this.scale.setZ(z);
         this.isDirty = true;
     }
 
     public void setPosition(double x, double y, double z) {
-        this.position = new Vector3D(x, y, z);
+        this.position.setX(x);
+        this.position.setY(y);
+        this.position.setZ(z);
         this.isDirty = true;
     }
 
     public void setRotation(double x, double y, double z) {
-        this.rotation = new Vector3D(x, y, z);
+        this.rotation.setX(x);
+        this.rotation.setY(y);
+        this.rotation.setZ(z);
         this.isDirty = true;
     }
 
     public void move(double dx, double dy, double dz) {
-        this.position.addInPlace(new Vector3D(dx, dy, dz));
+        this.position.setX(this.position.getX() + dx);
+        this.position.setY(this.position.getY() + dy);
+        this.position.setZ(this.position.getZ() + dz);
         this.isDirty = true;
     }
 
     public void rotate(double rx, double ry, double rz) {
-        this.rotation.addInPlace(new Vector3D(rx, ry, rz));
+        this.rotation.setX(this.rotation.getX() + rx);
+        this.rotation.setY(this.rotation.getY() + ry);
+        this.rotation.setZ(this.rotation.getZ() + rz);
         this.isDirty = true;
     }
 
     public void scale(double sx, double sy, double sz) {
-        this.scale.addInPlace(new Vector3D(sx, sy, sz));
+        this.scale.setX(this.scale.getX() * sx);
+        this.scale.setY(this.scale.getY() * sy);
+        this.scale.setZ(this.scale.getZ() * sz);
         this.isDirty = true;
     }
 
@@ -102,5 +127,13 @@ public class GameObject {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public Texture getTexture() {
+        return texture;
+    }
+
+    public void setTexture(Texture texture) {
+        this.texture = texture;
     }
 }

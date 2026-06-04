@@ -1,6 +1,7 @@
 package graphicEngine.math.geometry;
 
 import graphicEngine.math.tools.Vector3D;
+import graphicEngine.renderer.Texture;
 
 import java.awt.*;
 import java.util.List;
@@ -25,6 +26,8 @@ public class Plane {
     }
 
     public int clipTriangleAgainstPlane(Triangle triIn, List<Triangle> trisOut) {
+        Texture texture = triIn.getTexture();
+
         Vertex3D[] ptsInside  = new Vertex3D[3]; int nbPointsInside = 0;
         Vertex3D[] ptsOutside = new Vertex3D[3]; int nbPointsOutside = 0;
 
@@ -56,32 +59,31 @@ public class Plane {
         }
         if (nbPointsInside == 1) {
             // The triangle simply become a smaller triangle
-            double intersectionDistance = 0;
-
             Vertex3D[] vertsOut1 = new Vertex3D[3];
             Vertex2D[] textVertsOut1 = new Vertex2D[3];
 
             vertsOut1[0] = ptsInside[0];
-            vertsOut1[1] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[0], intersectionDistance);
-            vertsOut1[2] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[1], intersectionDistance);
-
             textVertsOut1[0] = textPtsInside[0];
+
+            double intersectionDistance = this.intersectionDistance(ptsInside[0],ptsOutside[0]);
+            vertsOut1[1] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[0], intersectionDistance);
             u = intersectionDistance * (textPtsOutside[0].u - textPtsInside[0].u) + textPtsInside[0].u;
-            v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[0].v) + textPtsInside[0].v;;
+            v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[0].v) + textPtsInside[0].v;
             textVertsOut1[1] = new Vertex2D(u,v);
 
-
-            u = intersectionDistance * (textPtsOutside[0].u - textPtsInside[0].u) + textPtsInside[0].u;
-            v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[0].v) + textPtsInside[0].v;;
+            intersectionDistance = this.intersectionDistance(ptsInside[0],ptsOutside[1]);
+            vertsOut1[2] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[1], intersectionDistance);
+            u = intersectionDistance * (textPtsOutside[1].u - textPtsInside[0].u) + textPtsInside[0].u;
+            v = intersectionDistance * (textPtsOutside[1].v - textPtsInside[0].v) + textPtsInside[0].v;
             textVertsOut1[2] = new Vertex2D(u,v);
 
 //            trisOut.add(new Triangle(vertsOut1, triIn.getColor()));
-            trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.RED));
+            trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.RED, texture));
 
             return 1;
         }
         if (nbPointsInside == 2) {
-            double intersectionDistance = 0;
+            // 2 triangles are created
             Vertex3D[] vertsOut1 = new Vertex3D[3];
             Vertex3D[] vertsOut2 = new Vertex3D[3];
 
@@ -89,30 +91,35 @@ public class Plane {
             Vertex2D[] textVertsOut2 = new Vertex2D[3];
 
             vertsOut1[0] = ptsInside[0];
-            vertsOut1[1] = ptsInside[1];
-            vertsOut1[2] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[0],intersectionDistance);  //=vertsout2[1]
-
             textVertsOut1[0] = textPtsInside[0];
+            vertsOut1[1] = ptsInside[1];
             textVertsOut1[1] = textPtsInside[1];
+
+            double intersectionDistance = this.intersectionDistance(ptsInside[0],ptsOutside[0]);
+            vertsOut1[2] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[0],intersectionDistance);  //=vertsout2[1]
             u = intersectionDistance * (textPtsOutside[0].u - textPtsInside[0].u) + textPtsInside[0].u;
             v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[0].v) + textPtsInside[0].v;;
             textVertsOut1[2] = new Vertex2D(u,v);
 
 
             vertsOut2[0] = ptsInside[1];
-            vertsOut2[1] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[0],intersectionDistance); // dans mon livre faut inverser les 2
-            vertsOut2[2] = this.intersectSegmentWithPlane(ptsInside[1],ptsOutside[0],intersectionDistance);
-
             textVertsOut2[0] = textPtsInside[1];
-            textVertsOut2[1] = textVertsOut1[2];
+
+            intersectionDistance = this.intersectionDistance(ptsInside[1],ptsOutside[0]);
+            vertsOut2[1] = this.intersectSegmentWithPlane(ptsInside[1],ptsOutside[0],intersectionDistance);
             u = intersectionDistance * (textPtsOutside[0].u - textPtsInside[1].u) + textPtsInside[1].u;
-            v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[1].v) + textPtsInside[1].v;;
-            textVertsOut2[2] = new Vertex2D(u,v);
+            v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[1].v) + textPtsInside[1].v;
+            textVertsOut2[1] = new Vertex2D(u,v);
+
+
+            vertsOut2[2] = vertsOut1[2];
+            textVertsOut2[2] = textVertsOut1[2];
+
 
 //            trisOut.add(new Triangle(vertsOut1, triIn.getColor()));
 //            trisOut.add(new Triangle(vertsOut2, triIn.getColor()));
-            trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.BLUE));
-            trisOut.add(new Triangle(vertsOut2, textVertsOut2, Color.GREEN));
+            trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.BLUE, texture));
+            trisOut.add(new Triangle(vertsOut2, textVertsOut2, Color.GREEN, texture));
 
             return 2;
         }
@@ -128,8 +135,7 @@ public class Plane {
         return vectPlaneNorm.dotProduct(pPoint) - vertPlanePoint.dotProduct(vectPlaneNorm);
     }
 
-
-    public Vertex3D intersectSegmentWithPlane(Vertex3D pLineStart, Vertex3D pLineEnd, double intersectionDistance ) {
+    public double intersectionDistance(Vertex3D pLineStart, Vertex3D pLineEnd) {
         Vertex3D vertPlanePoint = this.getOrigin();
         Vector3D vectPlaneNorm = this.getNormal();
 
@@ -137,8 +143,10 @@ public class Plane {
         double ad = pLineStart.dotProduct(vectPlaneNorm);
         double bd = pLineEnd.dotProduct(vectPlaneNorm);
 
-        intersectionDistance = (-dPlaneConstant - ad) / (bd - ad);
+        return  (-dPlaneConstant - ad) / (bd - ad);
+    }
 
+    public Vertex3D intersectSegmentWithPlane(Vertex3D pLineStart, Vertex3D pLineEnd, double intersectionDistance ) {
         Vector3D vectLineStartToEnd = new Vector3D(pLineEnd.sub(pLineStart));
         Vector3D vectLineIntersecting = vectLineStartToEnd.scaled(intersectionDistance);
 

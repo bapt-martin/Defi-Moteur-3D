@@ -9,6 +9,7 @@ import graphicEngine.math.tools.Vector3D;
 import graphicEngine.overlay.HeadUpDisplay;
 import graphicEngine.renderer.Camera;
 import graphicEngine.renderer.Pipeline;
+import graphicEngine.renderer.Texture;
 import graphicEngine.scene.GameObject;
 import graphicEngine.scene.Scene;
 
@@ -62,59 +63,53 @@ public class GraphicEngine extends Canvas implements Runnable {
         Mesh axis = ObjLoader.readObjFile(Paths.get("obj model\\axis.obj"));
         Mesh centeredCube = ObjLoader.readObjFile(Paths.get("obj model\\cube.obj"));
         Mesh outCenteredCube = ObjLoader.readObjFile(Paths.get("obj model\\cube pas centré.obj"));
+        Mesh texturedCube = ObjLoader.readObjFile(Paths.get("obj model\\cubeTexture.obj"));
 //        new Scene.MeshData("F1","obj model\\F1.obj")
 
         this.scene.addMesh("teapot", teapot);
         this.scene.addMesh("axis", axis);
         this.scene.addMesh("centeredCube", centeredCube);
         this.scene.addMesh("outCenteredCube", outCenteredCube);
+        this.scene.addMesh("texturedCube", texturedCube);
 
-//        this.scene.loadMeshes(
-//                List.of(new Scene.MeshData("teapot","obj model\\teapot.obj"),
-//                        new Scene.MeshData("axis","obj model\\axis.obj"),
-//                        new Scene.MeshData("cube centré","obj model\\cube.obj"),
-//                        new Scene.MeshData("cube pas centré","obj model\\cube.obj")
-////                        new Scene.MeshData("F1","obj model\\F1.obj")
-//        ));
+        System.out.println(this.scene.getMeshLibrary().get("texturedCube").getMeshTriangle().getFirst().getTextVertices()[0].toString());
+        System.out.println(this.scene.getMeshLibrary().get("texturedCube").getMeshTriangle().getFirst().getVertices()[0].toString());
+
+        Texture texturedCubeTexture = new Texture("obj model\\textureTest1.png");
+        this.scene.addTexture("texturedCubeTexture",texturedCubeTexture);
+        this.scene.getTextureLibrary().get("texturedCubeTexture").printPixelColor(0,1022);
+
 
         this.scene.addGameObject("teapot1", new GameObject(teapot));
         this.scene.addGameObject("teapot2", new GameObject(teapot));
         this.scene.addGameObject("teapot3", new GameObject(teapot));
         this.scene.addGameObject("teapot4", new GameObject(teapot));
         this.scene.addGameObject("axis1",   new GameObject(axis));
-        this.scene.addGameObject("cube1",   new GameObject(centeredCube));
+        this.scene.addGameObject("cubeCentered",   new GameObject(centeredCube));
         this.scene.addGameObject("teapot5", new GameObject(teapot));
         this.scene.addGameObject("teapot6", new GameObject(teapot));
-        this.scene.addGameObject("cube2", new GameObject(outCenteredCube));
+        this.scene.addGameObject("cubeOutCentered", new GameObject(outCenteredCube));
         this.scene.addGameObject("teapot7", new GameObject(teapot));
         this.scene.addGameObject("teapot8", new GameObject(teapot));
+        this.scene.addGameObject("cube3",   new GameObject(centeredCube));
+        this.scene.addGameObject("cube4",   new GameObject(centeredCube));
+        this.scene.addGameObject("cube5", new GameObject(outCenteredCube));
+        this.scene.addGameObject("cube6", new GameObject(outCenteredCube));
+        this.scene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
 
-//        this.scene.addMultipleGameObjects(
-//                List.of(new Scene.ObjectData("teapot1", "teapot"),
-//                        new Scene.ObjectData("teapot2", "teapot"),
-//                        new Scene.ObjectData("teapot3", "teapot"),
-//                        new Scene.ObjectData("teapot4", "teapot"),
-//                        new Scene.ObjectData("axis1",   "axis"),
-//                        new Scene.ObjectData("cube1",   "cube centré"),
-//                        new Scene.ObjectData("teapot5", "teapot"),
-//                        new Scene.ObjectData("teapot6", "teapot"),
-//                        new Scene.ObjectData("cube2", "cube pas centré"),
-//                        new Scene.ObjectData("teapot7", "teapot"),
-//                        new Scene.ObjectData("teapot8", "teapot")
-////                        new Scene.ObjectData("F1", "F1")
-//        ));
+        System.out.println(this.scene.getGameObjectLibrary().get("texturedCube").getMesh().getMeshTriangle().getFirst().getTextVertices()[0].toString());
+        System.out.println(this.scene.getGameObjectLibrary().get("texturedCube").getMesh().getMeshTriangle().getFirst().getVertices()[0].toString());
 
 
-//        scene.getGameObject(8).setScale(2.5, 2.5, 2.5);
 
         scene.getGameObject("axis1").setPosition(0, 0, 0);
         scene.getGameObject("axis1").setScale(-0.3, 0.3, 0.3);
 
-        scene.getGameObject("cube1").setPosition(1, 1, 1);
-        scene.getGameObject("cube2").setPosition(0, 0, 0);
-        scene.getGameObject("cube1").setRendered(true);
-        scene.getGameObject("cube2").setRendered(false);
-        scene.getGameObject("axis1").setRendered(true);
+        scene.getGameObject("cubeCentered").setPosition(0, 0, 0);
+        scene.getGameObject("cubeOutCentered").setPosition(0, 0, 0);
+        scene.getGameObject("cubeCentered").setRendered(false);
+        scene.getGameObject("cubeOutCentered").setRendered(false);
+        scene.getGameObject("axis1").setRendered(false);
 
 
         scene.getGameObject("teapot5").setRendered(false);
@@ -143,10 +138,22 @@ public class GraphicEngine extends Canvas implements Runnable {
         t4.setRotation(-45, 45, 0);
         t4.setScale(2, 0.6, 1.2);
 
-        t1.setRendered(true);
-        t2.setRendered(true);
-        t3.setRendered(true);
-        t4.setRendered(true);
+        t1.setRendered(false);
+        t2.setRendered(false);
+        t3.setRendered(false);
+        t4.setRendered(false);
+
+        scene.getGameObject("cube3").setPosition(6, 0, 5);
+        scene.getGameObject("cube4").setPosition(-6, 0, 5);
+        scene.getGameObject("cube5").setPosition(6, 0, -5);
+        scene.getGameObject("cube6").setPosition(-6, 0, -5);
+
+        scene.getGameObject("cube3").setRendered(false);
+        scene.getGameObject("cube4").setRendered(false);
+        scene.getGameObject("cube5").setRendered(false);
+        scene.getGameObject("cube6").setRendered(false);
+
+
 
         this.headUpDisplay = new HeadUpDisplay(graphicEngineContext);
 

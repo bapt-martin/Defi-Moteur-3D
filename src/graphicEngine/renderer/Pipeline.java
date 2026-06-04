@@ -71,14 +71,16 @@ public class Pipeline {
     public void processGameObject(Matrix projectionMatrix, Plane frontClippingPlane, Vector3D lightDirection, GameObject gameObject) {
         Matrix worldTransformMatrix = gameObject.getWorldTransformMatrix();
         List<Triangle> gameObjectTriangles = gameObject.getMesh().getMeshTriangle();
+        Texture texture = gameObject.getTexture();
 
         for (Triangle triMeshClean : gameObjectTriangles) {
-            this.processTriangle(projectionMatrix, frontClippingPlane, lightDirection, worldTransformMatrix, triMeshClean);
+            this.processTriangle(projectionMatrix, frontClippingPlane, lightDirection, worldTransformMatrix, triMeshClean, texture);
         }
     }
 
-    public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Vector3D lightDirection, Matrix worldTransformMatrix, Triangle triMeshClean) { //Backface Culling
+    public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Vector3D lightDirection, Matrix worldTransformMatrix, Triangle triMeshClean, Texture texture) { //Backface Culling
         Triangle triTransformed = triMeshClean.VertexTransformed(worldTransformMatrix);
+        triTransformed.setTexture(texture);
 
         boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
         if (!triTransformed.isFacing(this.camera,isFlipped)) {

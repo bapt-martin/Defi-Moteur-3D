@@ -1,8 +1,11 @@
 package graphicEngine.io;
 
 import graphicEngine.math.geometry.Mesh;
+import graphicEngine.math.geometry.Triangle;
+import graphicEngine.math.geometry.Vertex2D;
 import graphicEngine.math.geometry.Vertex3D;
 
+import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -12,8 +15,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Scanner;
 
 public abstract class ObjLoader {
 
@@ -26,50 +27,77 @@ public abstract class ObjLoader {
     }
 
     public static Mesh readObjFile(Path path) {
+        Mesh mesh = new Mesh();
+
         try (BufferedReader reader = Files.newBufferedReader(path)) {
             String line;
             List<Vertex3D> vertices = new ArrayList<>();
-            List<int[]> indicesFaces = new ArrayList<>();
+            List<Vertex2D> textVertices = new ArrayList<>();
+
+            List<Triangle> meshTriangles = mesh.getMeshTriangle();
 
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
-                if (!line.isEmpty()) {
-                    char firstCharacter = line.charAt(0);
 
-                    Scanner scan = new Scanner(line).useLocale(Locale.US);
-                    scan.next();
-                    switch (firstCharacter) {
-                        case 'v' -> {
-                            float x = scan.nextFloat();
-                            float y = scan.nextFloat();
-                            float z = scan.nextFloat();
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
 
-                            vertices.add(new Vertex3D(x, y, z));
-                        }
-                        case 'f' -> {
-                            int i1 = scan.nextInt()-1;
-                            int i2 = scan.nextInt()-1;
-                            int i3 = scan.nextInt()-1;
+                String[] tokens = line.split("\\s+");
+                String prefix = tokens[0];
 
-                            indicesFaces.add(new int[]{i1,i2,i3});
+                switch (prefix) {
+                    case "v" -> {
+                        float x = Float.parseFloat(tokens[1]);
+                        float y = Float.parseFloat(tokens[2]);
+                        float z = Float.parseFloat(tokens[3]);
+                        vertices.add(new Vertex3D(x, y, z));
+                    }
+                    case "vt" -> {
+                        float u = Float.parseFloat(tokens[1]);
+                        float v = Float.parseFloat(tokens[2]);
+                        textVertices.add(new Vertex2D(u, v));
+                    }
+                    case "f" -> {
+                        String[] vertex1 = tokens[1].split("/");
+                        String[] vertex2 = tokens[2].split("/");
+                        String[] vertex3 = tokens[3].split("/");
+
+                        int v1 = Integer.parseInt(vertex1[0]) - 1;
+                        int v2 = Integer.parseInt(vertex2[0]) - 1;
+                        int v3 = Integer.parseInt(vertex3[0]) - 1;
+
+                        Vertex3D[] triVerts = new Vertex3D[] {
+                                vertices.get(v1), vertices.get(v2), vertices.get(v3)
+                        };
+
+                        Vertex2D[] triUVs = new Vertex2D[3];
+
+                        if (vertex1.length > 1 && !vertex1[1].isEmpty()) {
+                            int vt1 = Integer.parseInt(vertex1[1]) - 1;
+                            int vt2 = Integer.parseInt(vertex2[1]) - 1;
+                            int vt3 = Integer.parseInt(vertex3[1]) - 1;
+
+                            triUVs[0] = textVertices.get(vt1);
+                            triUVs[1] = textVertices.get(vt2);
+                            triUVs[2] = textVertices.get(vt3);
+                        } else {
+                            triUVs[0] = new Vertex2D(0, 0);
+                            triUVs[1] = new Vertex2D(0, 0);
+                            triUVs[2] = new Vertex2D(0, 0);
                         }
-                        default -> {
-                        }
+
+                        meshTriangles.add(new Triangle(triVerts, triUVs, Color.WHITE));
                     }
                 }
             }
-            Mesh mesh = new Mesh();
-            mesh.triConstruct(indicesFaces, vertices);
 
             return mesh;
 
         } catch (IOException e) {
+            System.err.println("Error while reading file: " + path.toString());
             e.printStackTrace();
             return new Mesh();
         }
-    }
-
-    public static void main(String[] args) {
-        Mesh mesh = readObjFile(Paths.get("C:\\Users\\marti\\Desktop\\premier test.obj"));
     }
 }

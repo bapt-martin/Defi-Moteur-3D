@@ -30,4 +30,12 @@ public class Vertex2D {
 
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "Vertex2D{" +
+                "u=" + u +
+                ", v=" + v +
+                '}';
+    }
 }
