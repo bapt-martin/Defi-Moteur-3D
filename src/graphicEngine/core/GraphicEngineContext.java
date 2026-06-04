@@ -1,10 +1,13 @@
 package graphicEngine.core;
 
+import graphicEngine.math.geometry.Plane;
 import graphicEngine.math.geometry.Vertex3D;
+import graphicEngine.math.tools.Vector3D;
 import graphicEngine.renderer.Camera;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 public class GraphicEngineContext {
     private final GraphicEngine graphicEngine;
@@ -13,14 +16,17 @@ public class GraphicEngineContext {
     private volatile boolean isRunning;
 
     private boolean isHUDActive = true;
-    private boolean isBenchmarkModeActive = false;
+    private boolean isBenchmarkRunning = false;
 
     private int windowWidth;
     private int windowHeight;
     private Vertex3D windowPosition;
     private Vertex3D canvasCenter;
 
-    private int nbTriRenderPerFrame;
+    private Plane[] windowBorderPlanes;
+
+    private int triangleCountFrame;
+    private long totalTriangleCount = 0;
 
     private double deltaTime;
     private double elapsedTime = 0;
@@ -40,7 +46,7 @@ public class GraphicEngineContext {
         this.windowWidth = windowWidth;
         this.windowHeight = windowHeight;
         this.windowPosition = new Vertex3D(0, 0, 0);
-        this.nbTriRenderPerFrame = 0;
+        this.triangleCountFrame = 0;
         this.deltaTime = 0.1;
     }
 
@@ -60,14 +66,22 @@ public class GraphicEngineContext {
 
             this.canvasCenter = new Vertex3D(centerPoint.x, centerPoint.y, 0);
         }
+
+        this.windowBorderPlanes = new Plane[] {
+                new Plane(new Vertex3D(0, 0, 0), new Vector3D(0, 1, 0)),
+                new Plane(new Vertex3D(0, windowHeight - 1, 0),  new Vector3D(0, -1, 0)),
+                new Plane(new Vertex3D(0, 0, 0), new Vector3D(1, 0, 0)),
+                new Plane(new Vertex3D(windowWidth - 1, 0, 0),   new Vector3D(-1, 0, 0))
+        };
     }
 
-    public void updateNbRenderedTriangle() {
-        this.setNbTriRenderPerFrame(this.getNbTriRenderPerFrame() + 1);
+    public void incrementTriangleCount(int count) {
+        this.triangleCountFrame += count;
+        this.totalTriangleCount += count;
     }
 
     public void resetNbRenderedTriangle() {
-        this.setNbTriRenderPerFrame(0);
+        this.setTriangleCountFrame(0);
     }
 
     public int getWindowWidth() {
@@ -78,12 +92,12 @@ public class GraphicEngineContext {
         return windowHeight;
     }
 
-    public int getNbTriRenderPerFrame() {
-        return nbTriRenderPerFrame;
+    public int getTriangleCountFrame() {
+        return triangleCountFrame;
     }
 
-    public void setNbTriRenderPerFrame(int nbTriRenderPerFrame) {
-        this.nbTriRenderPerFrame = nbTriRenderPerFrame;
+    public void setTriangleCountFrame(int triangleCountFrame) {
+        this.triangleCountFrame = triangleCountFrame;
     }
 
     public double getDeltaTime() {
@@ -174,12 +188,12 @@ public class GraphicEngineContext {
         isHUDActive = HUDActive;
     }
 
-    public boolean isBenchmarkModeActive() {
-        return isBenchmarkModeActive;
+    public boolean isBenchmarkRunning() {
+        return isBenchmarkRunning;
     }
 
-    public void setBenchmarkModeActive(boolean benchmarkModeActive) {
-        isBenchmarkModeActive = benchmarkModeActive;
+    public void setBenchmarkRunning(boolean benchmarkRunning) {
+        isBenchmarkRunning = benchmarkRunning;
     }
 
     public BenchmarkManager getBenchmarkManager() {
@@ -188,5 +202,17 @@ public class GraphicEngineContext {
 
     public void setBenchmarkManager(BenchmarkManager benchmarkManager) {
         this.benchmarkManager = benchmarkManager;
+    }
+
+    public long getTotalTriangleCount() {
+        return totalTriangleCount;
+    }
+
+    public Plane[] getWindowBorderPlanes() {
+        return windowBorderPlanes;
+    }
+
+    public void setWindowBorderPlanes(Plane[] windowBorderPlanes) {
+        this.windowBorderPlanes = windowBorderPlanes;
     }
 }

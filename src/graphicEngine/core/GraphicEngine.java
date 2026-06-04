@@ -1,7 +1,11 @@
 package graphicEngine.core;
 
 import graphicEngine.input.InputManager;
-import graphicEngine.math.tools.Matrix;
+import graphicEngine.io.ObjLoader;
+import graphicEngine.math.geometry.Mesh;
+import graphicEngine.math.geometry.Plane;
+import graphicEngine.math.geometry.Vertex3D;
+import graphicEngine.math.tools.Vector3D;
 import graphicEngine.overlay.HeadUpDisplay;
 import graphicEngine.renderer.Camera;
 import graphicEngine.renderer.Pipeline;
@@ -11,7 +15,7 @@ import graphicEngine.scene.Scene;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferStrategy;
-import java.util.List;
+import java.nio.file.Paths;
 
 public class GraphicEngine extends Canvas implements Runnable {
     private Thread gameThread;
@@ -36,7 +40,7 @@ public class GraphicEngine extends Canvas implements Runnable {
 
         this.graphicEngineContext.setBenchmarkManager(this.benchmarkManager);
 
-        this.camera = new Camera(0.1,1000,90, graphicEngineContext);
+        this.camera = new Camera(0.1,1000,90, new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1)), graphicEngineContext);
 
 
         this.setBackground(new Color(150,150,200));
@@ -54,60 +58,87 @@ public class GraphicEngine extends Canvas implements Runnable {
 
         this.scene = new Scene();
 
-        this.scene.loadMeshes(
-                List.of(new Scene.MeshData("teapot","obj model\\teapot.obj"),
-                        new Scene.MeshData("axis","obj model\\axis.obj"),
-                        new Scene.MeshData("cube centré","obj model\\cube.obj"),
-                        new Scene.MeshData("cube pas centré","obj model\\cube.obj")
-//                        new Scene.MeshData("F1","obj model\\F1.obj")
-        ));
+        Mesh teapot = ObjLoader.readObjFile(Paths.get("obj model\\teapot.obj"));
+        Mesh axis = ObjLoader.readObjFile(Paths.get("obj model\\axis.obj"));
+        Mesh centeredCube = ObjLoader.readObjFile(Paths.get("obj model\\cube.obj"));
+        Mesh outCenteredCube = ObjLoader.readObjFile(Paths.get("obj model\\cube pas centré.obj"));
+//        new Scene.MeshData("F1","obj model\\F1.obj")
 
-        this.scene.addMultipleGameObjects(
-                List.of(new Scene.ObjectData("teapot1", "teapot"),
-                        new Scene.ObjectData("teapot2", "teapot"),
-                        new Scene.ObjectData("teapot3", "teapot"),
-                        new Scene.ObjectData("teapot4", "teapot"),
-                        new Scene.ObjectData("axis1",   "axis"),
-                        new Scene.ObjectData("cube1",   "cube centré"),
-                        new Scene.ObjectData("teapot5", "teapot"),
-                        new Scene.ObjectData("teapot6", "teapot"),
-                        new Scene.ObjectData("cube2", "cube pas centré")
-//                        new Scene.ObjectData("F1", "F1")
-        ));
+        this.scene.addMesh("teapot", teapot);
+        this.scene.addMesh("axis", axis);
+        this.scene.addMesh("centeredCube", centeredCube);
+        this.scene.addMesh("outCenteredCube", outCenteredCube);
+
+//        this.scene.loadMeshes(
+//                List.of(new Scene.MeshData("teapot","obj model\\teapot.obj"),
+//                        new Scene.MeshData("axis","obj model\\axis.obj"),
+//                        new Scene.MeshData("cube centré","obj model\\cube.obj"),
+//                        new Scene.MeshData("cube pas centré","obj model\\cube.obj")
+////                        new Scene.MeshData("F1","obj model\\F1.obj")
+//        ));
+
+        this.scene.addGameObject("teapot1", new GameObject(teapot));
+        this.scene.addGameObject("teapot2", new GameObject(teapot));
+        this.scene.addGameObject("teapot3", new GameObject(teapot));
+        this.scene.addGameObject("teapot4", new GameObject(teapot));
+        this.scene.addGameObject("axis1",   new GameObject(axis));
+        this.scene.addGameObject("cube1",   new GameObject(centeredCube));
+        this.scene.addGameObject("teapot5", new GameObject(teapot));
+        this.scene.addGameObject("teapot6", new GameObject(teapot));
+        this.scene.addGameObject("cube2", new GameObject(outCenteredCube));
+        this.scene.addGameObject("teapot7", new GameObject(teapot));
+        this.scene.addGameObject("teapot8", new GameObject(teapot));
+
+//        this.scene.addMultipleGameObjects(
+//                List.of(new Scene.ObjectData("teapot1", "teapot"),
+//                        new Scene.ObjectData("teapot2", "teapot"),
+//                        new Scene.ObjectData("teapot3", "teapot"),
+//                        new Scene.ObjectData("teapot4", "teapot"),
+//                        new Scene.ObjectData("axis1",   "axis"),
+//                        new Scene.ObjectData("cube1",   "cube centré"),
+//                        new Scene.ObjectData("teapot5", "teapot"),
+//                        new Scene.ObjectData("teapot6", "teapot"),
+//                        new Scene.ObjectData("cube2", "cube pas centré"),
+//                        new Scene.ObjectData("teapot7", "teapot"),
+//                        new Scene.ObjectData("teapot8", "teapot")
+////                        new Scene.ObjectData("F1", "F1")
+//        ));
 
 
 //        scene.getGameObject(8).setScale(2.5, 2.5, 2.5);
 
-        scene.getGameObject(4).setPosition(0, 0, 0);
-        scene.getGameObject(4).setScale(-0.3, 0.3, 0.3);
+        scene.getGameObject("axis1").setPosition(0, 0, 0);
+        scene.getGameObject("axis1").setScale(-0.3, 0.3, 0.3);
 
-        scene.getGameObject(5).setPosition(1, 1, 1);
-        scene.getGameObject(8).setPosition(0, 0, 0);
-        scene.getGameObject(5).setRendered(true);
-        scene.getGameObject(8).setRendered(false);
-        scene.getGameObject(4).setRendered(true);
-
-
-        scene.getGameObject(6).setRendered(false);
-        scene.getGameObject(7).setRendered(false);
+        scene.getGameObject("cube1").setPosition(1, 1, 1);
+        scene.getGameObject("cube2").setPosition(0, 0, 0);
+        scene.getGameObject("cube1").setRendered(true);
+        scene.getGameObject("cube2").setRendered(false);
+        scene.getGameObject("axis1").setRendered(true);
 
 
-        GameObject t1 = scene.getGameObject(0);
+        scene.getGameObject("teapot5").setRendered(false);
+        scene.getGameObject("teapot6").setRendered(false);
+        scene.getGameObject("teapot7").setRendered(false);
+        scene.getGameObject("teapot8").setRendered(false);
+
+
+        GameObject t1 = scene.getGameObject("teapot1");
         t1.setPosition(-6, 0, 8);
         t1.setRotation(0, 0, 0);
         t1.setScale(1, 1, 1);
 
-        GameObject t2 = scene.getGameObject(1);
+        GameObject t2 = scene.getGameObject("teapot2");
         t2.setPosition(6, 0, 8);
         t2.setRotation(45, 0, 0);
         t2.setScale(1.5, 1.5, 1.5);
 
-        GameObject t3 = scene.getGameObject(2);
+        GameObject t3 = scene.getGameObject("teapot3");
         t3.setPosition(0, 5, 8);
         t3.setRotation(0, 0, 180);
         t3.setScale(0.5, 0.5, 0.5);
 
-        GameObject t4 = scene.getGameObject(3);
+        GameObject t4 = scene.getGameObject("teapot4");
         t4.setPosition(0, -5, 8);
         t4.setRotation(-45, 45, 0);
         t4.setScale(2, 0.6, 1.2);
@@ -128,13 +159,13 @@ public class GraphicEngine extends Canvas implements Runnable {
     public void addNotify() {
         super.addNotify();
 
-        this.start();
-
         SwingUtilities.invokeLater(() -> {
             this.graphicEngineContext.updateWindowInformation();
             this.createBufferStrategy(3);
             this.requestFocusInWindow();
             inputManager.centerMouse();
+
+            this.start();
         });
     }
 
@@ -209,15 +240,15 @@ public class GraphicEngine extends Canvas implements Runnable {
     }
 
     private void update() {
-        inputManager.handleKeyPress();
+        inputManager.processInputs();
 
         camera.updateWindowProjectionMatrix();
         camera.updateCamReferentialMatrix();
         camera.updateProjectionMatrix();
 
-        scene.getGameObject(1).rotate(10,0,0);
-        scene.getGameObject(2).rotate(0,5,5);
-        scene.getGameObject(3).rotate(7,5,3);
+//        scene.getGameObject("teapot2").rotate(10,0,0);
+//        scene.getGameObject("teapot3").rotate(0,5,5);
+//        scene.getGameObject("teapot4").rotate(7,5,3);
 
 
         angleTheta += 0.07;
@@ -234,9 +265,9 @@ public class GraphicEngine extends Canvas implements Runnable {
         double sY = 1.0 + (0.5 * Math.sin(angleTheta));
         double sZ = 1.0 + (0.5 * Math.cos(anglePhi));
 
-//        scene.getGameObject(5).setScale(sX, sY, sZ);
-//        scene.getGameObject(5).rotate(0.5,1,1.5);
-//        scene.getGameObject(5).setPosition(x, y, z);
+//        scene.getGameObject("cube1").setScale(sX, sY, sZ);
+//        scene.getGameObject("cube1").rotate(0.5,1,1.5);
+//        scene.getGameObject("cube1").setPosition(x, y, z);
 
         if (graphicEngineContext.isHUDActive()) {
             headUpDisplay.updateStats();
@@ -245,11 +276,6 @@ public class GraphicEngine extends Canvas implements Runnable {
 
     private void render() {
         BufferStrategy bs = this.getBufferStrategy();
-
-        if (bs == null) {
-            this.createBufferStrategy(3);
-            return;
-        }
 
         Graphics g = bs.getDrawGraphics();
 //        Graphics g = this.getGraphics();
@@ -261,6 +287,7 @@ public class GraphicEngine extends Canvas implements Runnable {
         camera.updateProjectionMatrix();
 
         graphicEngineContext.resetNbRenderedTriangle();
+
         pipeline.execution(g);
 
         if (graphicEngineContext.isHUDActive()) {
@@ -286,22 +313,6 @@ public class GraphicEngine extends Canvas implements Runnable {
 
     public GraphicEngineContext getEngineContext() {
         return graphicEngineContext;
-    }
-
-    public void setWorldTransformMatrices(List<Integer> objectsId, List<Matrix> worldTransformMatrices) {
-        this.scene.setWorldTransformMatrices(objectsId, worldTransformMatrices);
-    }
-
-    public void setObjectsVisibility(List<Integer> objectsId, List<Boolean> renderedStatus) {
-        this.scene.setObjectsVisibility(objectsId, renderedStatus);
-    }
-
-    public void addMultipleGameObjects(List<Scene.ObjectData> objectReferences) {
-        this.scene.addMultipleGameObjects(objectReferences);
-    }
-
-    public List<Scene.IdSwap> removeMultipleGameObjects(List<Integer> indexList) {
-        return this.scene.removeMultipleGameObject(indexList);
     }
 
     public Camera getCamera() {

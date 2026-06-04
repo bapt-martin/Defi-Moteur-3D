@@ -1,12 +1,12 @@
 package graphicEngine.input;
 
+import graphicEngine.core.BenchmarkManager;
 import graphicEngine.core.GraphicEngineContext;
 import graphicEngine.math.tools.Vector3D;
 import graphicEngine.renderer.Camera;
 import graphicEngine.core.GraphicEngine;
 import graphicEngine.math.geometry.Vertex3D;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
@@ -16,9 +16,15 @@ public class InputManager {
     private final KeyboardInput keyboardInput;
     private final MouseInput mouseInput;
     private final MouseMotionInput mouseMotionInput;
+
     private Robot robot;
     private Point lastRobotPos = new Point(0, 0);
     private boolean isFirstMove = true;
+    double accumulatedDeltaX = 0;
+    double accumulatedDeltaY = 0;
+
+    private boolean isHUDTogglePreviously = false;
+    private boolean isBPressedPreviously = false;
 
     public InputManager(GraphicEngine graphicEngine, Camera camera) {
         this.graphicEngineContext = graphicEngine.getEngineContext();
@@ -44,24 +50,51 @@ public class InputManager {
     }
 
     public void toggleBenchmarkMode() {
-        if(keyboardInput.getKeysPressed()[KeyEvent.VK_B] && !graphicEngineContext.isBenchmarkModeActive()) {
-            graphicEngineContext.getBenchmarkManager().start();
+        boolean isBPressedNow = keyboardInput.getKeysPressed()[KeyEvent.VK_B];
+        if (isBPressedNow && !isBPressedPreviously) {
+
+            BenchmarkManager bm = graphicEngineContext.getBenchmarkManager();
+
+            if (!graphicEngineContext.isBenchmarkRunning()) {
+                bm.start();
+            }
+            else {
+                System.out.println("--- FORCED STOP ---");
+                bm.cancel();
+            }
         }
 
-        if(!keyboardInput.getKeysPressed()[KeyEvent.VK_B] && graphicEngineContext.isBenchmarkModeActive()) {
-            System.out.println("--- FORCED STOP ---");
-            graphicEngineContext.getBenchmarkManager().finish();
-        }
+        isBPressedPreviously = isBPressedNow;
     }
 
-    public void handleKeyPress() {
-        double translationCameraSpeed = camera.getdTranslationCameraSpeed();
-        double rotationCameraSpeed    = camera.getdRotationCameraSpeed();
+    public void toggleHUD() {
+        boolean isHUDToggledNow = keyboardInput.getKeysPressed()[KeyEvent.VK_H];
 
-        this.handleTranslation(1.0/graphicEngineContext.getUPS_TARGET(), translationCameraSpeed);
-        this.handleRotation(1.0/graphicEngineContext.getUPS_TARGET(), rotationCameraSpeed);
+        if(isHUDToggledNow && !isHUDTogglePreviously) {
+            boolean newState = !graphicEngineContext.isHUDActive();
+            graphicEngineContext.setHUDActive(newState);
+
+            if (newState) {
+                System.out.println("--- HUD ON ---");
+            } else {
+                System.out.println("--- HUD OFF ---");
+            }
+        }
+
+        isHUDTogglePreviously = isHUDToggledNow;
+    }
+
+    public void processInputs() {
+        double deltaFrameTime = 1.0 / graphicEngineContext.getUPS_TARGET();
+        double translationCameraSpeed = camera.getdTranslationCameraSpeed();
+        double rotationCameraSpeed = camera.getdRotationCameraSpeed();
+
+        this.handleTranslation(deltaFrameTime, translationCameraSpeed);
+        this.handleRotation(deltaFrameTime, rotationCameraSpeed);
+        this.applyMouseRotation(deltaFrameTime, rotationCameraSpeed);
 
         this.toggleBenchmarkMode();
+        this.toggleHUD();
     }
 
     public void handleTranslation(double deltaFrameTime, double translationCameraSpeed) {
@@ -141,7 +174,19 @@ public class InputManager {
         }
     }
 
-    public void handleMouseMoving(MouseEvent e) {
+    private synchronized void applyMouseRotation(double deltaFrameTime, double rotationCameraSpeed) {
+        if (this.accumulatedDeltaX != 0 || this.accumulatedDeltaY != 0) {
+            double sensitivity = mouseMotionInput.getMouseSensitivity();
+
+            camera.setCamYaw(camera.getCamYaw() + rotationCameraSpeed * this.accumulatedDeltaX * sensitivity);
+            camera.setCamPitch(camera.getCamPitch() + rotationCameraSpeed * this.accumulatedDeltaY * sensitivity);
+
+            this.accumulatedDeltaX = 0;
+            this.accumulatedDeltaY = 0;
+        }
+    }
+
+    public synchronized void handleMouseMoving(MouseEvent e) {
         Point currentPosGlobal = e.getLocationOnScreen();
 
         if (isFirstMove) {
@@ -155,11 +200,8 @@ public class InputManager {
             return;
         }
 
-        double deltaX = currentPosGlobal.x - lastRobotPos.x;
-        double deltaY = currentPosGlobal.y - lastRobotPos.y;
-
-        camera.setCamPitch(camera.getCamPitch() + camera.getdRotationCameraSpeed() * deltaY * mouseMotionInput.getMouseSensitivity());
-        camera.setCamYaw(camera.getCamYaw()     + camera.getdRotationCameraSpeed() * deltaX * mouseMotionInput.getMouseSensitivity());
+        this.accumulatedDeltaX += (currentPosGlobal.x - lastRobotPos.x);
+        this.accumulatedDeltaY += (currentPosGlobal.y - lastRobotPos.y);
 
         centerMouse();
     }

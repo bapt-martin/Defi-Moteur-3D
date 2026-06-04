@@ -164,7 +164,7 @@ public class Triangle {
 
 
     public Triangle projectToScreenInPlace(Matrix projectionMatrix, int iWinWidth, int iWinHeight) {
-        this.transformInPlace(projectionMatrix);
+        this.transformVertexInPlace(projectionMatrix);
         this.homogeneousDivisionInPlace();
         this.convertToWindowSpace(iWinWidth, iWinHeight);
 
@@ -217,14 +217,24 @@ public class Triangle {
             vertsTriTransformed[i] = vertsTriIn[i].transformed(matTransform);
         }
 
-        return new Triangle(vertsTriTransformed, this.getColor());
+        return new Triangle(vertsTriTransformed, this.getTextVertices(),this.getColor());
     }
 
-    public Triangle transformInPlace(Matrix matTransform) {
+    public Triangle transformVertexInPlace(Matrix matTransform) {
         Vertex3D[] vertsTriIn = this.getVertices();
 
         for (int i = 0; i < 3; i++) {
-            vertsTriIn[i].transformInPlace(matTransform);
+            vertsTriIn[i].transformTuple3DInPlace(matTransform);
+        }
+
+        return this;
+    }
+
+    public Triangle transformTextVertexInPlace(Matrix matTransform) {
+        Vertex2D[] textVertsTriIn = this.getTextVertices();
+
+        for (int i = 0; i < 3; i++) {
+            textVertsTriIn[i].transformVertex2DInPlace(matTransform);
         }
 
         return this;
@@ -240,6 +250,10 @@ public class Triangle {
 
     public Vertex3D[] getVertices() {
         return vertices;
+    }
+
+    public Vertex2D[] getTextVertices() {
+        return textVertices;
     }
 
     public Color getColor() {

@@ -65,7 +65,11 @@ public class Matrix {
         Matrix matRotY = Matrix.createRotationY(phi);
         Matrix matRotZ = Matrix.createRotationZ(psi);
 
-        return matRotX.multiply(matRotY).multiply(matRotZ);
+        multiply(matRotX,matRotY,matRotX);
+        multiply(matRotX,matRotZ,matRotX);
+
+//        matRotX.multiply(matRotY).multiply(matRotZ);
+        return matRotX;
     }
 
     public static Matrix createWorldTransformMatrix(double sx, double sy, double sz, double theta, double phi, double psi, double x, double y, double z) {
@@ -73,9 +77,12 @@ public class Matrix {
         Matrix matRotation    = Matrix.createEulerRotation(theta,phi,psi);
         Matrix matTranslation = Matrix.createTranslation(x,y,z);
 
-        return matScaling.multiply(matRotation).multiply(matTranslation);
-    }
+        multiply(matScaling,matRotation,matScaling);
+        multiply(matScaling,matTranslation,matScaling);
 
+//        matScaling.multiply(matRotation).multiply(matTranslation);
+        return matScaling;
+    }
 
     public static Matrix createViewMatrix(Vertex3D pTargetPosition, Vector3D vTargetDirection, Vector3D vUp) {
         //New forward direction

@@ -1,6 +1,5 @@
 package graphicEngine.input;
 
-import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
@@ -16,13 +15,13 @@ public class KeyboardInput implements KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         keysPressed[e.getKeyCode()] = true;
-        inputManager.handleKeyPress();
+        inputManager.processInputs();
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         keysPressed[e.getKeyCode()] = false;
-        inputManager.handleKeyPress();
+        inputManager.processInputs();
     }
 
     @Override

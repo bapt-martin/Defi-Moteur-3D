@@ -1,6 +1,7 @@
 package graphicEngine.renderer;
 
 import graphicEngine.core.GraphicEngineContext;
+import graphicEngine.math.geometry.Plane;
 import graphicEngine.math.tools.Matrix;
 import graphicEngine.math.tools.Vector3D;
 import graphicEngine.math.geometry.Vertex3D;
@@ -15,6 +16,7 @@ public class Camera {
     private Vector3D cameraRight;
 
     private Matrix projectionMatrix;
+    private Plane cameraClippingPlane;
     private double near;
     private double far;
     private double fov;
@@ -27,11 +29,12 @@ public class Camera {
 
 
     public Camera(GraphicEngineContext graphicEngineContext) {
-        this.cameraPosition = new Vertex3D(0, 0, 3);
+        this.cameraPosition = new Vertex3D(0, 0, 23);
         this.cameraRotation = new CameraRotation(0, 0, 0);
         this.cameraDirection = new Vector3D(0, 0, 1);
         this.cameraUp = new Vector3D(0, 1, 0);
         this.cameraRight = new Vector3D(1, 0, 0);
+        this.cameraClippingPlane = new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1));
         this.near = 0.1;
         this.far = 1000;
         this.fov = 90;
@@ -40,8 +43,9 @@ public class Camera {
         this.graphicEngineContext = graphicEngineContext;
     }
 
-    public Camera(double near, double far, double fov, GraphicEngineContext graphicEngineContext) {
+    public Camera(double near, double far, double fov, Plane cameraClippingPlane, GraphicEngineContext graphicEngineContext) {
         this(graphicEngineContext);
+        this.cameraClippingPlane = cameraClippingPlane;
         this.near = near;
         this.far = far;
         this.fov = fov;
@@ -174,6 +178,14 @@ public class Camera {
 
     public CameraRotation getCameraRotation() {
         return cameraRotation;
+    }
+
+    public Plane getCameraClippingPlane() {
+        return cameraClippingPlane;
+    }
+
+    public void setCameraClippingPlane(Plane cameraClippingPlane) {
+        this.cameraClippingPlane = cameraClippingPlane;
     }
 }
 

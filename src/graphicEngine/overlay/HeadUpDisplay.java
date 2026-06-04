@@ -85,7 +85,7 @@ public class HeadUpDisplay {
         double deltaTime = graphicEngineContext.getDeltaTime();
         addToHistory(frameTimeHistory, deltaTime * 1000);
 
-        int nbTri = graphicEngineContext.getNbTriRenderPerFrame();
+        int nbTri = graphicEngineContext.getTriangleCountFrame();
         addToHistory(triCountHistory, nbTri);
 
         this.triText = String.format("Triangles: %d", nbTri);
@@ -164,12 +164,12 @@ public class HeadUpDisplay {
 
         g.drawString(rotationText, startX, startY + lineHeight*2);
 
-        g.drawString(fpsText, startX + 220, startY);
+        g.drawString(fpsText, startX + 230, startY);
 
-        g.drawString(upsText, startX + 220, startY + lineHeight);
+        g.drawString(upsText, startX + 230, startY + lineHeight);
 
         g.setColor(Color.CYAN);
-        g.drawString(triText, startX + 220, startY + lineHeight*2);
+        g.drawString(triText, startX + 230, startY + lineHeight*2);
 
         g.setColor(Color.WHITE);
         g.drawString(frameText, startX + 350, startY);

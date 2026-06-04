@@ -81,8 +81,7 @@ public class Vertex3D extends Tuple3D {
         return new Vertex3D(super.transformed(matIn));
     }
 
-    @Override
-    public Vertex3D transformInPlace(Matrix mat) {
+    public Vertex3D transformTuple3DInPlace(Matrix mat) {
         super.transformInPlace(mat);
         return this;
     }
