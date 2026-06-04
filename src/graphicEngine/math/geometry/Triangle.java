@@ -9,6 +9,7 @@ import java.awt.*;
 import java.util.Arrays;
 
 import static java.awt.Color.*;
+import static java.lang.Math.abs;
 
 public class Triangle {
     private Vertex3D[] vertices = new Vertex3D[3];
@@ -92,10 +93,25 @@ public class Triangle {
 
     public Triangle homogeneousDivisionInPlace() {
         Vertex3D[] vertsIn = this.getVertices();
+        Vertex2D[] textVertsIn = this.getTextVertices();
 
-        vertsIn[0].divideInPlace(vertsIn[0].getW());
-        vertsIn[1].divideInPlace(vertsIn[1].getW());
-        vertsIn[2].divideInPlace(vertsIn[2].getW());
+        textVertsIn[0].u = textVertsIn[0].u / vertsIn[0].w;
+        textVertsIn[1].u = textVertsIn[1].u / vertsIn[1].w;
+        textVertsIn[2].u = textVertsIn[2].u / vertsIn[2].w;
+
+        textVertsIn[0].v = textVertsIn[0].v / vertsIn[0].w;
+        textVertsIn[1].v = textVertsIn[1].v / vertsIn[1].w;
+        textVertsIn[2].v = textVertsIn[2].v / vertsIn[2].w;
+
+
+        textVertsIn[0].w = 1 / vertsIn[0].w;
+        textVertsIn[1].w = 1 / vertsIn[1].w;
+        textVertsIn[2].w = 1 / vertsIn[2].w;
+
+
+        vertsIn[0].divideInPlace(vertsIn[0].w);
+        vertsIn[1].divideInPlace(vertsIn[1].w);
+        vertsIn[2].divideInPlace(vertsIn[2].w);
 
         return this;
     }
@@ -140,22 +156,24 @@ public class Triangle {
         return this;
     }
 
-    public void drawTriangle(Graphics g, boolean isOutlineRender) {
+    public void drawTriangle(Graphics g, boolean isOutlineRender, int winWidth, float[] depthBuffer) {
         // Getting back the coordinate to draw the 2D triangle
         this.get2DCoordinates(xs, ys);
 
-        g.setColor(this.getColor()); // Setting the correct color
-//        g.fillPolygon(xs, ys, 3);
-        this.drawTexturedTriangle(g, this.texture);
+        if (this.texture == null) {
+            this.drawTexturedTriangle(g, Texture.WHITE_PIXEL, winWidth, depthBuffer);
+        } else {
+            this.drawTexturedTriangle(g, this.texture, winWidth, depthBuffer);
+        }
 
         if (isOutlineRender) {
-            g.setColor(Color.BLACK); // Drawing the outline
+            g.setColor(Color.BLACK);
             g.drawPolygon(xs, ys, 3);
         }
     }
 
 
-    public void drawTexturedTriangle(Graphics g, Texture texture) {
+    public void drawTexturedTriangle(Graphics g, Texture texture, int winWidth, float[] depthBuffer) {
 
         Vertex3D[] verts = this.getVertices();
         Vertex2D[] uvs = this.getTextVertices();
@@ -171,18 +189,22 @@ public class Triangle {
 
         float u1 = (float) uvs[0].u;
         float v1 = (float) uvs[0].v;
+        float w1 = (float) uvs[0].w;
 
         float u2 = (float) uvs[1].u;
         float v2 = (float) uvs[1].v;
+        float w2 = (float) uvs[1].w;
 
         float u3 = (float) uvs[2].u;
         float v3 = (float) uvs[2].v;
+        float w3 = (float) uvs[2].w;
 
         if (y1 > y2) {
             int tempX = x1; x1 = x2; x2 = tempX;
             int tempY = y1; y1 = y2; y2 = tempY;
             float tempU = u1; u1 = u2; u2 = tempU;
             float tempV = v1; v1 = v2; v2 = tempV;
+            float tempW = w1; w1 = w2; w2 = tempW;
         }
 
         if (y1 > y3) {
@@ -190,6 +212,7 @@ public class Triangle {
             int tempY = y1; y1 = y3; y3 = tempY;
             float tempU = u1; u1 = u3; u3 = tempU;
             float tempV = v1; v1 = v3; v3 = tempV;
+            float tempW = w1; w1 = w3; w3 = tempW;
         }
 
         if (y2 > y3) {
@@ -197,32 +220,39 @@ public class Triangle {
             int tempY = y2; y2 = y3; y3 = tempY;
             float tempU = u2; u2 = u3; u3 = tempU;
             float tempV = v2; v2 = v3; v3 = tempV;
+            float tempW = w2; w2 = w3; w3 = tempW;
         }
 
         int   dy1 = y2 - y1;
         int   dx1 = x2 - x1;
         float dv1 = v2 - v1;
         float du1 = u2 - u1;
+        float dw1 = w2 - w1;
 
-        float tex_u; float tex_v;
 
         int   dy2 = y3 - y1;
         int   dx2 = x3 - x1;
         float dv2 = v3 - v1;
         float du2 = u3 - u1;
+        float dw2 = w3 - w1;
+
+        float tex_u; float tex_v; float tex_w;
 
         float dax_step = 0; float dbx_step = 0;
         float du1_step = 0; float du2_step = 0;
         float dv1_step = 0; float dv2_step = 0;
+        float dw1_step = 0; float dw2_step = 0;
 
-        if (dy1 != 0) dax_step = dx1 / (float) Math.abs(dy1);
-        if (dy2 != 0) dbx_step = dx2 / (float) Math.abs(dy2);
+        if (dy1 != 0) dax_step = dx1 / (float) abs(dy1);
+        if (dy2 != 0) dbx_step = dx2 / (float) abs(dy2);
 
-        if (dy1 != 0) du1_step = du1 / (float) Math.abs(dy1);
-        if (dy1 != 0) dv1_step = dv1 / (float) Math.abs(dy1);
+        if (dy1 != 0) du1_step = du1 / (float) abs(dy1);
+        if (dy1 != 0) dv1_step = dv1 / (float) abs(dy1);
+        if (dy1 != 0) dw1_step = dw1 / (float) abs(dy1);
 
-        if (dy2 != 0) du2_step = du2 / (float) Math.abs(dy2);
-        if (dy2 != 0) dv2_step = dv2 / (float) Math.abs(dy2);
+        if (dy2 != 0) du2_step = du2 / (float) abs(dy2);
+        if (dy2 != 0) dv2_step = dv2 / (float) abs(dy2);
+        if (dy2 != 0) dw2_step = dw2 / (float) abs(dy2);
 
         if (dy1 != 0) {
             for (int i = y1; i <= y2; i++) {
@@ -231,30 +261,38 @@ public class Triangle {
 
                 float tex_su = (u1 + (i-y1) * du1_step);
                 float tex_sv = (v1 + (i-y1) * dv1_step);
+                float tex_sw = (w1 + (i-y1) * dw1_step);
 
                 float tex_eu = (u1 + (i-y1) * du2_step);
                 float tex_ev = (v1 + (i-y1) * dv2_step);
+                float tex_ew = (w1 + (i-y1) * dw2_step);
 
                 if (ax > bx) {
                     int   tempX = ax;ax = bx;bx = tempX;
-                    float tempU = tex_su;tex_su = tex_eu;tex_eu = tempU;
-                    float tempV = tex_sv;tex_sv = tex_ev;tex_ev = tempV;
+                    float tempU = tex_su; tex_su = tex_eu; tex_eu = tempU;
+                    float tempV = tex_sv; tex_sv = tex_ev; tex_ev = tempV;
+                    float tempW = tex_sw; tex_sw = tex_ew; tex_ew = tempW;
                 }
 
                 tex_u = tex_su;
                 tex_v = tex_sv;
+                tex_w = tex_sw;
 
-                float tstep = 1 / (float) (bx-ax);
+                float tstep = 1 / (float) (Math.max(1,bx-ax));
                 float t = 0;
 
                 for (int j = ax; j <= bx; j++) {
                     tex_u = (1 - t) * tex_su  + t * tex_eu;
                     tex_v = (1 - t) * tex_sv  + t * tex_ev;
+                    tex_w = (1 - t) * tex_sw + t * tex_ew;
 
-                    int pixelColor = texture.getPixelRGB(tex_u, tex_v);
+                    int pixelColor = texture.getPixelRGB(tex_u/tex_w, tex_v/tex_w);
 //                    frameBuffer.setRGB(j, i, pixelColor);
-                    g.setColor(new Color(pixelColor, true));
-                    g.fillRect(j, i, 1, 1);
+                    if (depthBuffer[i*winWidth + j] < tex_w) {
+                        g.setColor(new Color(pixelColor, true));
+                        g.fillRect(j, i, 1, 1);
+                        depthBuffer[i * winWidth + j] = tex_w;
+                    }
 
                     t += tstep;
                 }
@@ -266,13 +304,15 @@ public class Triangle {
         dx1 = x3 - x2;
         dv1 = v3 - v2;
         du1 = u3 - u2;
+        dw1 = w3 - w2;
 
-        if (dy1 != 0) dax_step = dx1 / (float) Math.abs(dy1);
-        if (dy2 != 0) dbx_step = dx2 / (float) Math.abs(dy2);
+        if (dy1 != 0) dax_step = dx1 / (float) abs(dy1);
+        if (dy2 != 0) dbx_step = dx2 / (float) abs(dy2);
 
-        du1_step = 0; dv1_step = 0;
-        if (dy1 != 0) du1_step = du1 / (float) Math.abs(dy1);
-        if (dy1 != 0) dv1_step = dv1 / (float) Math.abs(dy1);
+        du1_step = 0; dv1_step = 0; dw1_step = 0;
+        if (dy1 != 0) du1_step = du1 / (float) abs(dy1);
+        if (dy1 != 0) dv1_step = dv1 / (float) abs(dy1);
+        if (dy1 != 0) dw1_step = dw1 / (float)abs(dy1);
 
         if (dy1 != 0) {
             for (int i = y2; i <= y3; i++) {
@@ -281,30 +321,38 @@ public class Triangle {
 
                 float tex_su = (u2 + (i-y2) * du1_step);
                 float tex_sv = (v2 + (i-y2) * dv1_step);
+                float tex_sw = w2 + (float)(i - y2) * dw1_step;
 
                 float tex_eu = (u1 + (i-y1) * du2_step);
                 float tex_ev = (v1 + (i-y1) * dv2_step);
+                float tex_ew = w1 + (float)(i - y1) * dw2_step;
 
                 if (ax > bx) {
                     int   tempX = ax;ax = bx;bx = tempX;
-                    float tempU = tex_su;tex_su = tex_eu;tex_eu = tempU;
-                    float tempV = tex_sv;tex_sv = tex_ev;tex_ev = tempV;
+                    float tempU = tex_su; tex_su = tex_eu; tex_eu = tempU;
+                    float tempV = tex_sv; tex_sv = tex_ev; tex_ev = tempV;
+                    float tempW = tex_sw; tex_sw = tex_ew; tex_ew = tempW;
                 }
 
                 tex_u = tex_su;
                 tex_v = tex_sv;
+                tex_w = tex_sw;
 
-                float tstep = 1 / (float) (bx-ax);
+                float tstep = 1 / (float) (Math.max(1,bx-ax));
                 float t = 0;
 
                 for (int j = ax; j <= bx; j++) {
                     tex_u = (1 - t) * tex_su  + t * tex_eu;
                     tex_v = (1 - t) * tex_sv  + t * tex_ev;
+                    tex_w = (1 - t) * tex_sw + t * tex_ew;
 
-                    int pixelColor = texture.getPixelRGB(tex_u, tex_v);
+                    int pixelColor = texture.getPixelRGB(tex_u/tex_w, tex_v/tex_w);
 //                    frameBuffer.setRGB(j, i, pixelColor);
-                    g.setColor(new Color(pixelColor, true));
-                    g.fillRect(j, i, 1, 1);
+                    if (depthBuffer[i*winWidth + j] < tex_w) {
+                        g.setColor(new Color(pixelColor, true));
+                        g.fillRect(j, i, 1, 1);
+                        depthBuffer[i * winWidth + j] = tex_w;
+                    }
 
                     t += tstep;
                 }

@@ -3,21 +3,30 @@ package graphicEngine.math.geometry;
 import graphicEngine.math.tools.Matrix;
 
 public class Vertex2D {
-    public double u, v;
+    public double u, v, w;
+
+    public Vertex2D(double u, double v, double w) {
+        this.u = u;
+        this.v = v;
+        this.w = w;
+    }
 
     public Vertex2D(double u, double v) {
         this.u = u;
         this.v = v;
+        this.w = 1;
     }
 
     public Vertex2D() {
         this.u = 0;
         this.v = 0;
+        this.w = 1;
     }
 
     public Vertex2D(Vertex2D other) {
         this.u = other.u;
         this.v = other.v;
+        this.w = other.w;
     }
 
     public Vertex2D transformVertex2DInPlace(Matrix mat) {

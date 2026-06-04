@@ -11,6 +11,7 @@ public class Texture {
     private String textureName;
     private int width;
     private int height;
+    public static final Texture WHITE_PIXEL = createWhitePixel();
 
     public Texture() {
         this.image = null;
@@ -53,6 +54,15 @@ public class Texture {
         int a = color.getAlpha();
 
         System.out.println("Pixel aux UV (" + u + ", " + v + ") -> R: " + r + " | G: " + g + " | B: " + b + " | A: " + a);
+    }
+
+    private static Texture createWhitePixel() {
+        Texture t = new Texture();
+        t.width = 1;
+        t.height = 1;
+        t.image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        t.image.setRGB(0, 0, 0xFFFFFF);
+        return t;
     }
 
     public String getTextureName() {

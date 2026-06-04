@@ -37,8 +37,7 @@ public class Plane {
         Vertex3D[] vertsIn = triIn.getVertices();
         Vertex2D[] textVertsIn = triIn.getTextVertices();
 
-        double u;
-        double v;
+        double u, v, w;
 
         // Vertex classification
         for (int i = 0; i < 3; i++) {
@@ -69,13 +68,15 @@ public class Plane {
             vertsOut1[1] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[0], intersectionDistance);
             u = intersectionDistance * (textPtsOutside[0].u - textPtsInside[0].u) + textPtsInside[0].u;
             v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[0].v) + textPtsInside[0].v;
-            textVertsOut1[1] = new Vertex2D(u,v);
+            w = intersectionDistance * (textPtsOutside[0].w - textPtsInside[0].w) + textPtsInside[0].w;
+            textVertsOut1[1] = new Vertex2D(u, v, w);
 
             intersectionDistance = this.intersectionDistance(ptsInside[0],ptsOutside[1]);
             vertsOut1[2] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[1], intersectionDistance);
             u = intersectionDistance * (textPtsOutside[1].u - textPtsInside[0].u) + textPtsInside[0].u;
             v = intersectionDistance * (textPtsOutside[1].v - textPtsInside[0].v) + textPtsInside[0].v;
-            textVertsOut1[2] = new Vertex2D(u,v);
+            w = intersectionDistance * (textPtsOutside[1].w - textPtsInside[0].w) + textPtsInside[0].w;
+            textVertsOut1[2] = new Vertex2D(u, v, w);
 
 //            trisOut.add(new Triangle(vertsOut1, triIn.getColor()));
             trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.RED, texture));
@@ -99,7 +100,8 @@ public class Plane {
             vertsOut1[2] = this.intersectSegmentWithPlane(ptsInside[0],ptsOutside[0],intersectionDistance);  //=vertsout2[1]
             u = intersectionDistance * (textPtsOutside[0].u - textPtsInside[0].u) + textPtsInside[0].u;
             v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[0].v) + textPtsInside[0].v;;
-            textVertsOut1[2] = new Vertex2D(u,v);
+            w = intersectionDistance * (textPtsOutside[0].w - textPtsInside[0].w) + textPtsInside[0].w;
+            textVertsOut1[2] = new Vertex2D(u, v, w);
 
 
             vertsOut2[0] = ptsInside[1];
@@ -109,11 +111,12 @@ public class Plane {
             vertsOut2[1] = this.intersectSegmentWithPlane(ptsInside[1],ptsOutside[0],intersectionDistance);
             u = intersectionDistance * (textPtsOutside[0].u - textPtsInside[1].u) + textPtsInside[1].u;
             v = intersectionDistance * (textPtsOutside[0].v - textPtsInside[1].v) + textPtsInside[1].v;
-            textVertsOut2[1] = new Vertex2D(u,v);
+            w = intersectionDistance * (textPtsOutside[0].w - textPtsInside[1].w) + textPtsInside[1].w;
+            textVertsOut2[1] = new Vertex2D(u, v, w);
 
 
-            vertsOut2[2] = vertsOut1[2];
-            textVertsOut2[2] = textVertsOut1[2];
+            vertsOut2[2] = new Vertex3D(vertsOut1[2]);
+            textVertsOut2[2] = new Vertex2D(textVertsOut1[2]);
 
 
 //            trisOut.add(new Triangle(vertsOut1, triIn.getColor()));

@@ -41,7 +41,10 @@ public class GraphicEngine extends Canvas implements Runnable {
 
         this.graphicEngineContext.setBenchmarkManager(this.benchmarkManager);
 
-        this.camera = new Camera(0.1,1000,90, new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1)), graphicEngineContext);
+        this.camera = new Camera(0.1,1000,90,
+                                    new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1)),
+                                    new Plane(new Vertex3D(0, 0, 50), new Vector3D(0, 0, -1)),
+                                    graphicEngineContext);
 
 
         this.setBackground(new Color(150,150,200));
@@ -107,15 +110,15 @@ public class GraphicEngine extends Canvas implements Runnable {
 
         scene.getGameObject("cubeCentered").setPosition(0, 0, 0);
         scene.getGameObject("cubeOutCentered").setPosition(0, 0, 0);
-        scene.getGameObject("cubeCentered").setRendered(false);
+        scene.getGameObject("cubeCentered").setRendered(true);
         scene.getGameObject("cubeOutCentered").setRendered(false);
-        scene.getGameObject("axis1").setRendered(false);
+        scene.getGameObject("axis1").setRendered(true);
 
 
-        scene.getGameObject("teapot5").setRendered(false);
-        scene.getGameObject("teapot6").setRendered(false);
-        scene.getGameObject("teapot7").setRendered(false);
-        scene.getGameObject("teapot8").setRendered(false);
+        scene.getGameObject("teapot5").setRendered(true);
+        scene.getGameObject("teapot6").setRendered(true);
+        scene.getGameObject("teapot7").setRendered(true);
+        scene.getGameObject("teapot8").setRendered(true);
 
 
         GameObject t1 = scene.getGameObject("teapot1");
@@ -253,9 +256,9 @@ public class GraphicEngine extends Canvas implements Runnable {
         camera.updateCamReferentialMatrix();
         camera.updateProjectionMatrix();
 
-//        scene.getGameObject("teapot2").rotate(10,0,0);
-//        scene.getGameObject("teapot3").rotate(0,5,5);
-//        scene.getGameObject("teapot4").rotate(7,5,3);
+        scene.getGameObject("teapot2").rotate(10,0,0);
+        scene.getGameObject("teapot3").rotate(0,5,5);
+        scene.getGameObject("teapot4").rotate(7,5,3);
 
 
         angleTheta += 0.07;
@@ -272,9 +275,9 @@ public class GraphicEngine extends Canvas implements Runnable {
         double sY = 1.0 + (0.5 * Math.sin(angleTheta));
         double sZ = 1.0 + (0.5 * Math.cos(anglePhi));
 
-//        scene.getGameObject("cube1").setScale(sX, sY, sZ);
-//        scene.getGameObject("cube1").rotate(0.5,1,1.5);
-//        scene.getGameObject("cube1").setPosition(x, y, z);
+        scene.getGameObject("texturedCube").setScale(sX, sY, sZ);
+        scene.getGameObject("texturedCube").rotate(0.5,1,1.5);
+        scene.getGameObject("texturedCube").setPosition(x, y, z);
 
         if (graphicEngineContext.isHUDActive()) {
             headUpDisplay.updateStats();
