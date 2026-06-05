@@ -66,6 +66,7 @@ public class GraphicEngineContext {
             SwingUtilities.convertPointToScreen(centerPoint, graphicEngine);
 
             this.canvasCenter = new Vertex3D(centerPoint.x, centerPoint.y, 0);
+            camera.updateProjectionMatrix();
         }
 
         this.windowBorderPlanes = new Plane[] {
@@ -206,7 +207,7 @@ public class GraphicEngineContext {
     }
 
     public BenchmarkManager getBenchmarkManager() {
-        return graphicEngine.getBenchmarkManager();
+        return benchmarkManager;
     }
 
     public void setBenchmarkManager(BenchmarkManager benchmarkManager) {

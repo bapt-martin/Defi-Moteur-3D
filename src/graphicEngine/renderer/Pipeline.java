@@ -167,9 +167,7 @@ public class Pipeline {
     }
 
     public void clearDepthBuffer() {
-        for (int i = 0; i < depthBuffer.length; i++) {
-            depthBuffer[i] = (float) 0;
-        }
+        depthBuffer = new float[graphicEngineContext.getWindowHeight() * graphicEngineContext.getWindowWidth()];
     }
 
     public Matrix getViewMatrix() {

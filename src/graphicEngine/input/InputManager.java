@@ -28,7 +28,7 @@ public class InputManager {
     private boolean isCameraSpotPressedPreviously = false;
 
     public InputManager(GraphicEngine graphicEngine, Camera camera) {
-        this.graphicEngineContext = graphicEngine.getEngineContext();
+        this.graphicEngineContext = graphicEngine.getGraphicEngineContext();
         this.camera = camera;
         this.keyboardInput = new KeyboardInput(this);
         this.mouseInput = new MouseInput(graphicEngine, this);

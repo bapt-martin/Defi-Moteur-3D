@@ -472,6 +472,7 @@ public class Triangle {
             int pixelColor = texture.getPixelRGB(tex_u / tex_w, tex_v / tex_w);
             int finalColor = multiplyColors(pixelColor, this.color);
             int index = y * winWidth + j;
+//            System.out.println(index +" "+pixels.length);
 
             if (j >= 0 && j < winWidth && index >= 0 && index < pixels.length) {
                 if (tex_w > depthBuffer[index]) {
