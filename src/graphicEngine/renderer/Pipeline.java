@@ -2,11 +2,11 @@ package graphicEngine.renderer;
 
 import graphicEngine.core.GraphicEngineContext;
 import graphicEngine.scene.GameObject;
+import graphicEngine.scene.lightRelative.PointLight;
 import graphicEngine.scene.Scene;
 import graphicEngine.math.geometry.Plane;
 import graphicEngine.math.geometry.Triangle;
 import graphicEngine.math.tools.Matrix;
-import graphicEngine.math.tools.Vector3D;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -25,8 +25,6 @@ public class Pipeline {
     private List<Triangle> listPing = new ArrayList<>();
     private List<Triangle> listPong = new ArrayList<>();
 
-    private Vector3D lightDirection = new Vector3D(0, 0, 1);
-
     private float[] depthBuffer;
 
     public Pipeline(Camera camera, Scene scene, GraphicEngineContext graphicEngineContext) {
@@ -39,7 +37,7 @@ public class Pipeline {
         this.trisToRender = new ArrayList<>();
     }
 
-    public void execution(Graphics g) {
+    public void execution(int[] pixels ) {
         this.updateViewMatrix();
 
         this.clearDepthBuffer();
@@ -48,7 +46,7 @@ public class Pipeline {
 
 //        this.paintersAlgorithm();
 
-        this.rasterizePass(g);
+        this.rasterizePass(pixels);
     }
 
     public void updateViewMatrix() {
@@ -64,35 +62,38 @@ public class Pipeline {
         this.processedTriangle.clear();
 
         List<GameObject> renderQueue = scene.getRenderQueue();
+        List<PointLight> lightQueue = scene.getLightQueue();
         for (GameObject gameObject : renderQueue) {
             if(!gameObject.isRendered()) {
                 continue;
             }
 
-            this.processGameObject(projectionMatrix, frontClippingPlane, farClippingPlane, lightDirection, gameObject);
+
+            this.processGameObject(projectionMatrix, frontClippingPlane, farClippingPlane, lightQueue, gameObject);
         }
     }
 
-    public void processGameObject(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, Vector3D lightDirection, GameObject gameObject) {
+    public void processGameObject(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightDirection, GameObject gameObject) {
         Matrix worldTransformMatrix = gameObject.getWorldTransformMatrix();
         List<Triangle> gameObjectTriangles = gameObject.getMesh().getMeshTriangle();
         Texture texture = gameObject.getTexture();
 
         for (Triangle triMeshClean : gameObjectTriangles) {
-            this.processTriangle(projectionMatrix, frontClippingPlane, farClippingPlane, lightDirection, worldTransformMatrix, triMeshClean, texture);
+            this.processTriangle(projectionMatrix, frontClippingPlane, farClippingPlane, lightDirection, worldTransformMatrix, triMeshClean, texture, gameObject.getBasedColor());
         }
     }
 
-    public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, Vector3D lightDirection, Matrix worldTransformMatrix, Triangle triMeshClean, Texture texture) { //Backface Culling
+    public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, Matrix worldTransformMatrix, Triangle triMeshClean, Texture texture,Color basedColor) { //Backface Culling
         Triangle triTransformed = triMeshClean.VertexTransformed(worldTransformMatrix);
         triTransformed.setTexture(texture);
+        triTransformed.setColor(basedColor);
 
         boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
         if (!triTransformed.isFacing(this.camera,isFlipped)) {
             return;
         }
 
-        triTransformed.setLighting(lightDirection, isFlipped);
+        triTransformed.setLighting(lightQueue, isFlipped);
 
         triTransformed.transformVertexInPlace(viewMatrix);
 
@@ -125,18 +126,17 @@ public class Pipeline {
         });
     }
 
-    public void rasterizePass(Graphics g) {
+    public void rasterizePass(int[] pixels) {
         int winWidth = graphicEngineContext.getWindowWidth();
         int winHeight = graphicEngineContext.getWindowHeight();
 
-        Graphics2D g2 = (Graphics2D) g;
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-
+//        Graphics2D g2 = (Graphics2D) g;
+//        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 
         for (Triangle triToClip : processedTriangle) {
             this.clipToScreen(winWidth, winHeight, triToClip);
 
-            this.drawBatch(graphicEngineContext, g2, winWidth, depthBuffer);
+            this.drawBatch(graphicEngineContext, pixels, winWidth, depthBuffer);
         }
     }
 
@@ -158,9 +158,9 @@ public class Pipeline {
         this.trisToRender = listPing;
     }
 
-    public void drawBatch(GraphicEngineContext graphicEngineContext, Graphics g, int winWidth, float[] depthBuffer) {
+    public void drawBatch(GraphicEngineContext graphicEngineContext, int[] pixels, int winWidth, float[] depthBuffer) {
         for (Triangle triToDraw : trisToRender) {
-            triToDraw.drawTriangle(g, false, winWidth, depthBuffer);
+            triToDraw.drawTriangle(pixels, false, winWidth, depthBuffer);
         }
 
         graphicEngineContext.incrementTriangleCount(trisToRender.size());

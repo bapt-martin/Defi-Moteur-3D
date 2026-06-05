@@ -1,14 +1,19 @@
 package graphicEngine.scene;
 
 import graphicEngine.math.geometry.Mesh;
+import graphicEngine.math.geometry.Triangle;
 import graphicEngine.math.tools.Matrix;
 import graphicEngine.math.tools.Vector3D;
 import graphicEngine.renderer.Texture;
 import org.w3c.dom.Text;
 
+import java.awt.*;
+import java.util.List;
+
 public class GameObject {
     private Mesh mesh;
     private Texture texture;
+    private Color basedColor = Color.WHITE;
     private Matrix worldTransformMatrix;
     private String name;
     private int id;
@@ -32,6 +37,15 @@ public class GameObject {
     public GameObject(Mesh mesh, Texture texture) {
         this.mesh = mesh;
         this.texture = texture;
+        this.scale    = new Vector3D(1,1,1);
+        this.rotation = new Vector3D();
+        this.position = new Vector3D();
+        this.updateWorldTransformMatrix();
+    }
+
+    public GameObject(Mesh mesh, Color color) {
+        this.mesh = mesh;
+        this.basedColor = color;
         this.scale    = new Vector3D(1,1,1);
         this.rotation = new Vector3D();
         this.position = new Vector3D();
@@ -92,6 +106,20 @@ public class GameObject {
         return mesh;
     }
 
+//    public List<Triangle> getMeshTriangle() {
+//        List<Triangle> gameObjectTriangles = mesh.getMeshTriangle();
+//        if (isBasedColorChanged) {
+//            for (Triangle triangle : gameObjectTriangles) {
+//                triangle.setColor(this.basedColor);
+//            }
+//            isBasedColorChanged = false;
+//        }
+//
+//        return gameObjectTriangles;
+//    }
+
+
+
     public Matrix getWorldTransformMatrix() {
         if (isDirty) {
             updateWorldTransformMatrix();
@@ -135,5 +163,25 @@ public class GameObject {
 
     public void setTexture(Texture texture) {
         this.texture = texture;
+    }
+
+    public Color getBasedColor() {
+        return basedColor;
+    }
+
+    public void setBasedColor(Color basedColor) {
+        this.basedColor = basedColor;
+    }
+
+    public Vector3D getScale() {
+        return scale;
+    }
+
+    public Vector3D getRotation() {
+        return rotation;
+    }
+
+    public Vector3D getPosition() {
+        return position;
     }
 }

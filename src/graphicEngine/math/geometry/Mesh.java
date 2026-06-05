@@ -11,38 +11,6 @@ public class Mesh {
         this.meshTriangle = new ArrayList<>();
     }
 
-    public void triConstruct(List<int[]> indicesFaces, List<Vertex3D> vertices) {
-        List<Triangle> meshTriangle = this.getMeshTriangle();
-
-        int count = 0;
-        for (int[] face : indicesFaces) {
-            Vertex3D vert1 = vertices.get(face[0]);
-            Vertex3D vert2 = vertices.get(face[1]);
-            Vertex3D vert3 = vertices.get(face[2]);
-
-
-            Vertex2D tVert1;
-            Vertex2D tVert2;
-            Vertex2D tVert3;
-
-            tVert1 = new Vertex2D(0,1);
-            if ((count % 2) == 0) {
-                tVert2 = new Vertex2D(0,0);
-                tVert3 = new Vertex2D(1,0);
-            } else {
-                tVert2 = new Vertex2D(1,0);
-                tVert3 = new Vertex2D(1,1);
-            }
-
-            count++;
-
-            meshTriangle.add(new Triangle(vert1, vert2, vert3, tVert1, tVert2, tVert3));
-//            meshTriangle.add(new Triangle(vert1, vert2, vert3));
-        }
-
-        this.meshTriangle = meshTriangle;
-    }
-
     public List<Triangle> getMeshTriangle() {
         return meshTriangle;
     }

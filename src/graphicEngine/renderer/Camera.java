@@ -5,6 +5,9 @@ import graphicEngine.math.geometry.Plane;
 import graphicEngine.math.tools.Matrix;
 import graphicEngine.math.tools.Vector3D;
 import graphicEngine.math.geometry.Vertex3D;
+import graphicEngine.scene.lightRelative.SpotLight;
+
+import java.awt.*;
 
 public class Camera {
     private GraphicEngineContext graphicEngineContext;
@@ -14,6 +17,8 @@ public class Camera {
     private Vector3D cameraDirection;
     private Vector3D cameraUp;
     private Vector3D cameraRight;
+
+    private SpotLight cameraSpot;
 
     private Matrix projectionMatrix;
     private Plane cameraFrontClippingPlane;
@@ -30,13 +35,7 @@ public class Camera {
 
 
     public Camera(GraphicEngineContext graphicEngineContext) {
-        this.cameraPosition = new Vertex3D(0, 0, 23);
-        this.cameraRotation = new CameraRotation(0, 0, 0);
-        this.cameraDirection = new Vector3D(0, 0, 1);
-        this.cameraUp = new Vector3D(0, 1, 0);
         this.cameraRight = new Vector3D(1, 0, 0);
-        this.cameraFrontClippingPlane = new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1));
-        this.cameraFrontClippingPlane = new Plane(new Vertex3D(0, 0, 25), new Vector3D(0, 0, 1));
         this.near = 0.1;
         this.far = 1000;
         this.fov = 90;
@@ -45,13 +44,30 @@ public class Camera {
         this.graphicEngineContext = graphicEngineContext;
     }
 
-    public Camera(double near, double far, double fov, Plane cameraFrontClippingPlane, Plane cameraFarClippingPlane, GraphicEngineContext graphicEngineContext) {
+    public Camera(Vertex3D cameraPosition, CameraRotation cameraRotation, Vector3D cameraDirection, Vector3D cameraUp,
+                  Plane cameraFrontClippingPlane, Plane cameraFarClippingPlane,
+                  double near, double far, double fov,
+                  GraphicEngineContext graphicEngineContext,
+                  double cameraSpotFalloff, Color cameraSpotColor, double cameraSpotCutoffAngle) {
+
         this(graphicEngineContext);
+        this.cameraPosition  = cameraPosition;
+        this.cameraRotation  = cameraRotation;
+        this.cameraDirection = cameraDirection;
+        this.cameraUp        = cameraUp;
+        this.cameraRight     = this.cameraDirection.crossProduct(this.cameraUp);
         this.cameraFrontClippingPlane = cameraFrontClippingPlane;
         this.cameraFarClippingPlane = cameraFarClippingPlane;
         this.near = near;
         this.far = far;
         this.fov = fov;
+        this.cameraSpot = new SpotLight(
+                new Vector3D(cameraPosition.x, cameraPosition.y, cameraPosition.z),
+                cameraSpotFalloff,
+                cameraSpotColor,
+                cameraDirection,
+                cameraSpotCutoffAngle
+        );
     }
 
     public static class CameraRotation {
@@ -102,12 +118,23 @@ public class Camera {
         cameraDirection = localAxes[0];
         cameraUp = localAxes[1];
         cameraRight = localAxes[2];
+
+        this.updateSpotLight();
+    }
+
+    public void updateSpotLight() {
+        if (cameraSpot != null) {
+            cameraSpot.setPosition(new Vector3D(cameraPosition.x, cameraPosition.y, cameraPosition.z));
+            cameraSpot.setDirection(cameraDirection);
+        }
     }
 
     public void translateCameraInPlace(Vector3D translationDirection, int sens, double translationSpeed, double deltaFrameTime) {
         translationDirection.scaleInPlace(sens * deltaFrameTime * translationSpeed);
 
         this.cameraPosition.translateInPlace(translationDirection);
+
+        this.updateSpotLight();
     }
 
     public double rotateCameraInPlace(double currentRotationValue, double rotationSpeed, double deltaFrameTime) {
@@ -193,6 +220,10 @@ public class Camera {
 
     public Plane getCameraFarClippingPlane() {
         return cameraFarClippingPlane;
+    }
+
+    public SpotLight getCameraSpot() {
+        return cameraSpot;
     }
 }
 

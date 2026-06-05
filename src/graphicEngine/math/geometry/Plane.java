@@ -78,8 +78,8 @@ public class Plane {
             w = intersectionDistance * (textPtsOutside[1].w - textPtsInside[0].w) + textPtsInside[0].w;
             textVertsOut1[2] = new Vertex2D(u, v, w);
 
-//            trisOut.add(new Triangle(vertsOut1, triIn.getColor()));
-            trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.RED, texture));
+            trisOut.add(new Triangle(vertsOut1, textVertsOut1, triIn.getColor(), texture));
+//            trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.RED, texture));
 
             return 1;
         }
@@ -119,10 +119,10 @@ public class Plane {
             textVertsOut2[2] = new Vertex2D(textVertsOut1[2]);
 
 
-//            trisOut.add(new Triangle(vertsOut1, triIn.getColor()));
-//            trisOut.add(new Triangle(vertsOut2, triIn.getColor()));
-            trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.BLUE, texture));
-            trisOut.add(new Triangle(vertsOut2, textVertsOut2, Color.GREEN, texture));
+            trisOut.add(new Triangle(vertsOut1, textVertsOut1, triIn.getColor(), texture));
+            trisOut.add(new Triangle(vertsOut2, textVertsOut2, triIn.getColor(), texture));
+//            trisOut.add(new Triangle(vertsOut1, textVertsOut1, Color.BLUE, texture));
+//            trisOut.add(new Triangle(vertsOut2, textVertsOut2, Color.GREEN, texture));
 
             return 2;
         }

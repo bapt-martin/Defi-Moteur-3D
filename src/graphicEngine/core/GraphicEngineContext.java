@@ -17,6 +17,7 @@ public class GraphicEngineContext {
 
     private boolean isHUDActive = true;
     private boolean isBenchmarkRunning = false;
+    private boolean isCameraSpotOn = false;
 
     private int windowWidth;
     private int windowHeight;
@@ -53,7 +54,7 @@ public class GraphicEngineContext {
     public void updateWindowInformation() {
         this.windowWidth = graphicEngine.getWidth();
         this.windowHeight = graphicEngine.getHeight();
-
+//        System.out.println(windowHeight + " " + windowWidth);
         if (graphicEngine.isShowing()) {
             Point loc = graphicEngine.getLocationOnScreen();
             this.windowPosition = new Vertex3D(loc.x, loc.y, 0);
@@ -194,6 +195,14 @@ public class GraphicEngineContext {
 
     public void setBenchmarkRunning(boolean benchmarkRunning) {
         isBenchmarkRunning = benchmarkRunning;
+    }
+
+    public boolean isCameraSpotOn() {
+        return isCameraSpotOn;
+    }
+
+    public void setCameraSpotOn(boolean cameraSpotOn) {
+        isCameraSpotOn = cameraSpotOn;
     }
 
     public BenchmarkManager getBenchmarkManager() {

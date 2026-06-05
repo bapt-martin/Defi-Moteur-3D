@@ -24,7 +24,8 @@ public class InputManager {
     double accumulatedDeltaY = 0;
 
     private boolean isHUDTogglePreviously = false;
-    private boolean isBPressedPreviously = false;
+    private boolean isBenchmarkTogglePreviously = false;
+    private boolean isCameraSpotPressedPreviously = false;
 
     public InputManager(GraphicEngine graphicEngine, Camera camera) {
         this.graphicEngineContext = graphicEngine.getEngineContext();
@@ -51,7 +52,7 @@ public class InputManager {
 
     public void toggleBenchmarkMode() {
         boolean isBPressedNow = keyboardInput.getKeysPressed()[KeyEvent.VK_B];
-        if (isBPressedNow && !isBPressedPreviously) {
+        if (isBPressedNow && !isBenchmarkTogglePreviously) {
 
             BenchmarkManager bm = graphicEngineContext.getBenchmarkManager();
 
@@ -64,7 +65,7 @@ public class InputManager {
             }
         }
 
-        isBPressedPreviously = isBPressedNow;
+        isBenchmarkTogglePreviously = isBPressedNow;
     }
 
     public void toggleHUD() {
@@ -84,6 +85,23 @@ public class InputManager {
         isHUDTogglePreviously = isHUDToggledNow;
     }
 
+    public void toggleCameraSpotlight() {
+        boolean isCameraSpotPressedNow = keyboardInput.getKeysPressed()[KeyEvent.VK_T];
+
+        if(isCameraSpotPressedNow && !isCameraSpotPressedPreviously) {
+            boolean newState = !graphicEngineContext.isCameraSpotOn();
+            graphicEngineContext.setCameraSpotOn(newState);
+
+            if (newState) {
+                System.out.println("--- Camera SpotLight ON ---");
+            } else {
+                System.out.println("--- Camera SpotLight OFF ---");
+            }
+        }
+
+        isCameraSpotPressedPreviously = isCameraSpotPressedNow;
+    }
+
     public void processInputs() {
         double deltaFrameTime = 1.0 / graphicEngineContext.getUPS_TARGET();
         double translationCameraSpeed = camera.getdTranslationCameraSpeed();
@@ -95,6 +113,7 @@ public class InputManager {
 
         this.toggleBenchmarkMode();
         this.toggleHUD();
+        this.toggleCameraSpotlight();
     }
 
     public void handleTranslation(double deltaFrameTime, double translationCameraSpeed) {
