@@ -1,6 +1,7 @@
 package engines.graphicEngine.renderer;
 
 import engines.graphicEngine.core.GraphicEngineContext;
+import engines.graphicEngine.math.geometry.Vertex2D;
 import engines.graphicEngine.scene.GameObject;
 import engines.graphicEngine.scene.lightRelative.PointLight;
 import engines.graphicEngine.scene.Scene;
@@ -31,7 +32,7 @@ public class Pipeline {
         this.camera = camera;
         this.scene = scene;
         this.graphicEngineContext = graphicEngineContext;
-        this.depthBuffer = new float[graphicEngineContext.getWindowHeight()* graphicEngineContext.getWindowWidth()];
+        this.depthBuffer = new float[graphicEngineContext.getWindowHeight() * graphicEngineContext.getWindowWidth()];
         this.updateViewMatrix();
         this.processedTriangle = new ArrayList<>();
         this.trisToRender = new ArrayList<>();
@@ -81,9 +82,7 @@ public class Pipeline {
     }
 
     public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, Matrix worldTransformMatrix, Triangle triMeshClean, Texture texture,Color basedColor) { //Backface Culling
-        Triangle triTransformed = triMeshClean.VertexTransformed(worldTransformMatrix);
-        triTransformed.setTexture(texture);
-        triTransformed.setColor(basedColor);
+        Triangle triTransformed = triMeshClean.transformed(worldTransformMatrix, basedColor, texture);
 
         boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
         if (!triTransformed.isFacing(this.camera,isFlipped)) {

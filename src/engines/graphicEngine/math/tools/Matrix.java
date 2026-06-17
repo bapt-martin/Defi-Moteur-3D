@@ -45,11 +45,11 @@ public class Matrix {
 
     public static Matrix createProjectionMatrix(double far, double near, double fov, int width, int height, double zoom) {
         double q = far / (far - near);
-        double aspectRatio = (double) width / height;
+        double inverseAspectRatio = (double) height / width;
         double scalingFactorRad = zoom / tan((fov * 0.5 * Math.PI) / 180 );
 
         double[][] matProj = new double[4][4];
-        matProj[0][0] = scalingFactorRad * aspectRatio;
+        matProj[0][0] = scalingFactorRad * inverseAspectRatio;
         matProj[1][1] = scalingFactorRad;
         matProj[2][2] = q;
         matProj[3][3] = 0;

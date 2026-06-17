@@ -35,13 +35,30 @@ public class Camera {
 
 
     public Camera(GraphicEngineContext graphicEngineContext) {
+        this.graphicEngineContext = graphicEngineContext;
+
+        this.cameraPosition = new Vertex3D(0, 0, 0);
+        this.cameraRotation = new CameraRotation(0, 0, 0);
+        this.cameraDirection = new Vector3D(0, 0, 1);
+        this.cameraUp = new Vector3D(0, 1, 0);
         this.cameraRight = new Vector3D(1, 0, 0);
+
+        this.cameraFrontClippingPlane = new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1));
+        this.cameraFarClippingPlane = new Plane(new Vertex3D(0, 0, 1000), new Vector3D(0, 0, -1));
+
         this.near = 0.1;
         this.far = 1000;
         this.fov = 90;
         this.zoom = 1;
         this.zoomFactor = 0.1;
-        this.graphicEngineContext = graphicEngineContext;
+
+        this.cameraSpot = new SpotLight(
+                new Vector3D(0, 0, 0),
+                0.005,
+                Color.WHITE,
+                new Vector3D(0, 0, 1),
+                30
+        );
     }
 
     public Camera(Vertex3D cameraPosition, CameraRotation cameraRotation, Vector3D cameraDirection, Vector3D cameraUp,
@@ -51,23 +68,38 @@ public class Camera {
                   double cameraSpotFalloff, Color cameraSpotColor, double cameraSpotCutoffAngle) {
 
         this(graphicEngineContext);
-        this.cameraPosition  = cameraPosition;
-        this.cameraRotation  = cameraRotation;
-        this.cameraDirection = cameraDirection;
-        this.cameraUp        = cameraUp;
-        this.cameraRight     = this.cameraDirection.crossProduct(this.cameraUp);
+
+        this.updateParameters(cameraPosition, cameraRotation, cameraDirection, cameraUp,
+                cameraFrontClippingPlane, cameraFarClippingPlane,
+                near, far, fov,
+                cameraSpotFalloff, cameraSpotColor, cameraSpotCutoffAngle);
+    }
+
+    public void updateParameters(Vertex3D cameraPosition, CameraRotation cameraRotation, Vector3D cameraDirection, Vector3D cameraUp,
+                                 Plane cameraFrontClippingPlane, Plane cameraFarClippingPlane,
+                                 double near, double far, double fov,
+                                 double cameraSpotFalloff, Color cameraSpotColor, double cameraSpotCutoffAngle) {
+
+        this.cameraPosition.copyFrom(cameraPosition);
+
+        this.cameraRotation = cameraRotation;
+
+        this.cameraDirection.copyFrom(cameraDirection);
+        this.cameraUp.copyFrom(cameraUp);
+
+        this.cameraRight = this.cameraDirection.crossProduct(this.cameraUp);
+
         this.cameraFrontClippingPlane = cameraFrontClippingPlane;
         this.cameraFarClippingPlane = cameraFarClippingPlane;
         this.near = near;
         this.far = far;
         this.fov = fov;
-        this.cameraSpot = new SpotLight(
-                new Vector3D(cameraPosition.x, cameraPosition.y, cameraPosition.z),
-                cameraSpotFalloff,
-                cameraSpotColor,
-                cameraDirection,
-                cameraSpotCutoffAngle
-        );
+
+        this.cameraSpot.setPosition(new Vector3D(this.cameraPosition.x, this.cameraPosition.y, this.cameraPosition.z));
+        this.cameraSpot.setDirection(this.cameraDirection);
+        this.cameraSpot.setFallOff(cameraSpotFalloff);
+        this.cameraSpot.setLightColor(cameraSpotColor);
+        this.cameraSpot.setCutOffAngle(Math.cos(Math.toRadians(cameraSpotCutoffAngle)));
     }
 
     public static class CameraRotation {

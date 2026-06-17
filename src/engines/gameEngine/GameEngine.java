@@ -36,15 +36,7 @@ public abstract class GameEngine implements Runnable{
         this.graphicEngineContext = graphicEngine.getGraphicEngineContext();
 
         this.scene = new Scene();
-        this.camera = new Camera(new Vertex3D(0, 0, 23),
-                new Camera.CameraRotation(0, 0, 0),
-                new Vector3D(0, 0, 1),
-                new Vector3D(0, 1, 0),
-                new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1)),
-                new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
-                0.1,50,90,
-                graphicEngine.getGraphicEngineContext(),
-                0.005, Color.WHITE, 30);
+        this.camera = new Camera(graphicEngine.getGraphicEngineContext());
 
         this.graphicEngine.getGraphicEngineContext().setCamera(this.camera);
 

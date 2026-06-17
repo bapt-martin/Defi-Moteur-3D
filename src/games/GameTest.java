@@ -1,9 +1,12 @@
-package games; // À terme, tu mettras ça dans un package 'game'
+package games;
 
 import engines.gameEngine.GameEngine;
 import engines.graphicEngine.io.ObjLoader;
 import engines.graphicEngine.math.geometry.Mesh;
+import engines.graphicEngine.math.geometry.Plane;
+import engines.graphicEngine.math.geometry.Vertex3D;
 import engines.graphicEngine.math.tools.Vector3D;
+import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Texture;
 import engines.graphicEngine.scene.GameObject;
 import engines.graphicEngine.scene.lightRelative.PointLight;
@@ -12,7 +15,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.nio.file.Paths;
 
-// MonJeu "EST UN" GameEngine
+
 public class GameTest extends GameEngine {
     private double angleTheta = 0;
     private double anglePhi = 0;
@@ -23,6 +26,15 @@ public class GameTest extends GameEngine {
 
     @Override
     public void initGame() {
+        this.camera.updateParameters(new Vertex3D(0, 0, 23),
+                new Camera.CameraRotation(0, 0, 0),
+                new Vector3D(0, 0, 1),
+                new Vector3D(0, 1, 0),
+                new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1)),
+                new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
+                0.1,50,90,
+                0.005, Color.WHITE, 15);
+
         scene.addLight("cameraSpotLight", this.camera.getCameraSpot());
 
         Mesh teapot = ObjLoader.readObjFile(Paths.get("obj model\\objTextureLess\\teapot.obj"));
@@ -68,6 +80,10 @@ public class GameTest extends GameEngine {
         scene.getGameObject("sun2").setPosition(-10, 5, 10);
 
         this.scene.addGameObject("teapot1", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot2", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot3", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot4", new GameObject(teapot, Color.WHITE));
+
 
         this.scene.addGameObject("axis1",   new GameObject(axis, Color.BLUE));
 
@@ -95,8 +111,6 @@ public class GameTest extends GameEngine {
         t1.setPosition(35, 0, 8);
         t1.setRotation(0, 0, 0);
         t1.setScale(10, 10, 10);
-
-
 
         t1.setRendered(true);
     }
