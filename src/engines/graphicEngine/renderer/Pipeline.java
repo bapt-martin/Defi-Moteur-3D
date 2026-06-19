@@ -46,11 +46,9 @@ public class Pipeline {
         this.trisToRender = new ArrayList<>();
 
         int cores = Runtime.getRuntime().availableProcessors();
-//        this.numThreads = Math.max(1, cores - 8);
-        this.numThreads = 1;
+        this.numThreads = Math.max(1, cores - 8);
+//        this.numThreads = 8;
         this.executor = Executors.newFixedThreadPool(this.numThreads);
-
-        this.frameWorkQueue = new Triangle[scene.getTotalTrianglesCount()];
     }
 
     public void execution(int[] pixels ) {
@@ -58,7 +56,8 @@ public class Pipeline {
 
         this.clearDepthBuffer();
 
-        this.processAllGeometry();
+        this.processAllGeometryMultiThreaded();
+//        this.processAllGeometry();
 
         this.rasterizePass(pixels);
     }
@@ -67,80 +66,79 @@ public class Pipeline {
         this.viewMatrix = Matrix.createViewMatrix(this.camera.getCameraPosition(), this.camera.getCameraDirection(), this.camera.getCameraUp());
     }
 
-//    public void processAllGeometryMultiThreaded() {
-//        this.processedTriangle.clear();
-//        this.trianglesToProcessCount = 0;
-//
-//        for (GameObject obj : scene.getRenderQueue()) {
-//            if (!obj.isRendered()) {
-//                continue;
-//            }
-//
-//            Triangle[] poolTriangle = obj.getPoolTriangle();
-//
-//            for (Triangle t : poolTriangle) {
-//                this.frameWorkQueue[this.trianglesToProcessCount] = t;
-//                this.trianglesToProcessCount++;
-//            }
-//        }
-//
-//        if (this.trianglesToProcessCount == 0) return;
-//
-//        Matrix projectionMatrix = this.camera.getProjectionMatrix();
-//
-//        Plane frontClippingPlane = camera.getCameraFrontClippingPlane();
-//        Plane farClippingPlane = camera.getCameraFarClippingPlane();
-//
-//        List<GameObject> renderQueue = scene.getRenderQueue(); //habunai
-//
-//        List<PointLight> lightQueue = scene.getLightQueue();
-//
-//        List<Future<List<Triangle>>> futures = new ArrayList<>();
-//        int chunkSize = this.trianglesToProcessCount / this.numThreads;
-//
-//        for (GameObject gameObject : renderQueue) {
-//            this.processGameObject(projectionMatrix, frontClippingPlane, farClippingPlane, lightQueue, gameObject);
-//        }
-//
-//        for (int i = 0; i < this.numThreads; i++) {
-//            final int startIdx = i * chunkSize;
-//            final int endIdx = (i == this.numThreads - 1) ? this.trianglesToProcessCount : (i + 1) * chunkSize;
-//
-//            futures.add(executor.submit(() -> {
-//                List<Triangle> localBuffer = new ArrayList<>();
-//
-//                for (int j = startIdx; j < endIdx; j++) {
-//                    Triangle pooledTri = this.frameWorkQueue[j];
-//
-//                    Matrix worldMat = pooledTri.getParentWorldTransformMatrix();
-//
-//                    boolean isFlipped = worldMat.getDeterminant() < 0;
-//                    if (!pooledTri.isFacing(this.camera, isFlipped)) {
-//                        continue;
-//                    }
-//
-//                    pooledTri.transformVertexInPlace(worldMat);
-//                    pooledTri.transformVertexInPlace(this.viewMatrix);
-//
-//                    pooledTri.setLighting(lightQueue, isFlipped);
-//
-//                    this.clipAndProject(projectionMatrix, frontClippingPlane, farClippingPlane, pooledTri, localBuffer);
-//                }
-//                return localBuffer;
-//            }));
-//        }
-//
-//        // ==========================================
-//        // 3. LA RÉCOLTE
-//        // ==========================================
-//        for (Future<List<Triangle>> future : futures) {
-//            try {
-//                this.processedTriangle.addAll(future.get());
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//        }
-//    }
+    public void processAllGeometryMultiThreaded() {
+        this.processedTriangle.clear();
+        this.trianglesToProcessCount = 0;
+
+        for (GameObject obj : scene.getRenderQueue()) {
+            obj.getWorldTransformMatrix();
+            if (!obj.isRendered()) {
+                continue;
+            }
+
+            Triangle[] poolTriangle = obj.getPoolTriangle();
+
+            for (Triangle t : poolTriangle) {
+                this.frameWorkQueue[this.trianglesToProcessCount] = t;
+                this.trianglesToProcessCount++;
+            }
+        }
+
+        if (this.trianglesToProcessCount == 0) return;
+
+        Matrix projectionMatrix = this.camera.getProjectionMatrix();
+
+        Plane frontClippingPlane = camera.getCameraFrontClippingPlane();
+        Plane farClippingPlane = camera.getCameraFarClippingPlane();
+
+        List<PointLight> lightQueue = scene.getLightQueue();
+
+        List<Future<List<Triangle>>> futures = new ArrayList<>();
+        int chunkSize = this.trianglesToProcessCount / this.numThreads;
+
+
+
+        for (int i = 0; i < this.numThreads; i++) {
+            final int startIdx = i * chunkSize;
+            final int endIdx = (i == this.numThreads - 1) ? this.trianglesToProcessCount : (i + 1) * chunkSize;
+
+            futures.add(executor.submit(() -> {
+
+                List<Triangle> bufferSingleThreadProcessedTriangle = new ArrayList<>();
+                List<Triangle> localClippedWorker = new ArrayList<>();
+
+                for (int j = startIdx; j < endIdx; j++) {
+
+                    Triangle pooledTri = this.frameWorkQueue[j];
+
+                    Matrix worldTransformMatrix = pooledTri.getParentWorldTransformMatrix();
+
+                    pooledTri.getParentTriangle().transformInPool(worldTransformMatrix, pooledTri);
+
+                    boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
+                    if (!pooledTri.isFacing(this.camera, isFlipped)) {
+                        continue;
+                    }
+
+
+                    pooledTri.setLighting(lightQueue, isFlipped);
+
+                    pooledTri.transformVertexInPlace(this.viewMatrix);
+
+                    this.clipAndProjectThread(projectionMatrix, frontClippingPlane, farClippingPlane, pooledTri, bufferSingleThreadProcessedTriangle, localClippedWorker);
+                }
+                return bufferSingleThreadProcessedTriangle;
+            }));
+        }
+
+        for (Future<List<Triangle>> future : futures) {
+            try {
+                this.processedTriangle.addAll(future.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     public void processAllGeometry() {
         this.processedTriangle.clear();
@@ -181,7 +179,7 @@ public class Pipeline {
     public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, Matrix worldTransformMatrix, Triangle triMeshClean, Triangle pooledTri, Texture texture,Color baseColor) { //Backface Culling
 //        pooledTri = triMeshClean.transformed(worldTransformMatrix, baseColor, texture);
 
-        triMeshClean.transformInPool(worldTransformMatrix, baseColor, texture, pooledTri);
+        triMeshClean.transformInPool(worldTransformMatrix, pooledTri);
 
         boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
 
@@ -211,6 +209,24 @@ public class Pipeline {
 
         for (int i = startIndex; i < endIndex; i++) {
             this.processedTriangle.get(i).projectToScreenInPlace(projectionMatrix, graphicEngineContext.getWindowWidth(), graphicEngineContext.getWindowHeight());
+        }
+    }
+
+    public void clipAndProjectThread(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, Triangle triTransformed, List<Triangle> localResultBuffer, List<Triangle> localClippedWorker) {
+        localClippedWorker.clear();
+
+        frontClippingPlane.clipTriangleAgainstPlane(triTransformed, localClippedWorker);
+
+        int startIndex = localResultBuffer.size();
+
+        for (Triangle frontTri : localClippedWorker) {
+            farClippingPlane.clipTriangleAgainstPlane(frontTri, localResultBuffer);
+        }
+
+        int endIndex = localResultBuffer.size();
+
+        for (int i = startIndex; i < endIndex; i++) {
+            localResultBuffer.get(i).projectToScreenInPlace(projectionMatrix, graphicEngineContext.getWindowWidth(), graphicEngineContext.getWindowHeight());
         }
     }
 
@@ -257,9 +273,9 @@ public class Pipeline {
     public void clearDepthBuffer() {
         int newLength = graphicEngineContext.getWindowHeight() * graphicEngineContext.getWindowWidth();
         if (newLength != depthBuffer.length) {
-            java.util.Arrays.fill(depthBuffer, 0.0f);
-        } else {
             depthBuffer = new float[newLength];
+        } else {
+            java.util.Arrays.fill(depthBuffer, 0.0f);
         }
     }
 
@@ -269,5 +285,9 @@ public class Pipeline {
 
     public List<Triangle> getProcessedTriangle() {
         return processedTriangle;
+    }
+
+    public void setFrameWorkQueue(Triangle[] frameWorkQueue) {
+        this.frameWorkQueue = frameWorkQueue;
     }
 }

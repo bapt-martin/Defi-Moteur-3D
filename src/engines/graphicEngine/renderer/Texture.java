@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class Texture {
     private BufferedImage image;
-    private String textureName;
+    private String textureName = "NaN";
     private int width;
     private int height;
     private int widthMinusOne, heightMinusOne;
@@ -66,6 +66,8 @@ public class Texture {
 
     private static Texture createWhitePixel() {
         Texture t = new Texture();
+
+        t.textureName = "defaultEngineTexture";
 
         t.image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
         t.image.setRGB(0, 0, 0xFFFFFF);

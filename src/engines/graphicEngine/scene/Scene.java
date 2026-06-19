@@ -39,42 +39,6 @@ public class Scene {
         this.lightQueue = new ArrayList<>();
     }
 
-
-    // Cette méthode est à appeler UNE SEULE FOIS quand ta scène a fini de charger
-    public void buildGlobalBuffers() {
-        // 1. On compte le nombre total de triangles dans la scène
-        this.totalTriangles = 0;
-        for (GameObject obj : renderQueue) {
-            this.totalTriangles += obj.getMesh().getMeshTriangle().size();
-        }
-
-        // 2. On alloue les tableaux géants une bonne fois pour toutes
-        this.globalOriginals = new Triangle[totalTriangles];
-        this.globalPool = new Triangle[totalTriangles];
-
-        int currentIndex = 0;
-
-        // 3. On "aplatit" tous les objets
-        for (GameObject obj : renderQueue) {
-            List<Triangle> objTriangles = obj.getMesh().getMeshTriangle();
-            Matrix refMatrix = obj.getWorldTransformMatrix();
-            Color refColor = obj.getBasedColor();
-            Texture refTexture = obj.getTexture();
-
-            for (Triangle tri : objTriangles) {
-                // On injecte le contexte de l'objet dans le triangle original
-//                tri.setParentContext(refMatrix, refColor, refTexture);
-
-                this.globalOriginals[currentIndex] = tri;
-
-                // On crée le brouillon (Deep Clone) directement dans le grand pool
-                this.globalPool[currentIndex] = tri.deepClone();
-
-                currentIndex++;
-            }
-        }
-    }
-
     public Triangle[] getGlobalOriginals() { return globalOriginals; }
     public Triangle[] getGlobalPool() { return globalPool; }
     public int getTotalTriangles() { return totalTriangles; }
@@ -84,6 +48,7 @@ public class Scene {
         for (GameObject obj : renderQueue) {
             count += obj.getPoolTriangle().length;
         }
+        System.out.println(count);
         return count;
     }
 

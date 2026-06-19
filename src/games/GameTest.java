@@ -89,10 +89,10 @@ public class GameTest extends GameEngine {
         this.scene.addGameObject("teapot8", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot9", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot10", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot11", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot12", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot13", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot14", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot11", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot12", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot13", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot14", new GameObject(teapot, Color.WHITE));
 //        this.scene.addGameObject("teapot15", new GameObject(teapot, Color.WHITE));
 //        this.scene.addGameObject("teapot16", new GameObject(teapot, Color.WHITE));
 //        this.scene.addGameObject("teapot17", new GameObject(teapot, Color.WHITE));

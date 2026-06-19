@@ -7,16 +7,15 @@ import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Texture;
 
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.List;
 
 public class GameObject {
     private Mesh mesh;
     private Triangle[] poolTriangle;
-    private Texture texture;
+    private Texture texture = Texture.WHITE_PIXEL;
     private Color basedColor = Color.WHITE;
     private Matrix worldTransformMatrix;
-    private String name;
+    private String name = "NaN";
     private int id;
 
     private Vector3D scale;
@@ -64,10 +63,13 @@ public class GameObject {
 
         for (int i=0; i<size; i++) {
             trianglePool[i] = meshTriangle.get(i).deepClone();
+            trianglePool[i].setTexture(texture);
+            trianglePool[i].setColor(basedColor);
+            trianglePool[i].setParentTriangle(meshTriangle.get(i));
             trianglePool[i].setParentWorldTransformMatrix(parentWorldTransformMatrix);
-//            System.out.println(trianglePool[0].getTexture().getTextureName());
         }
 
+            System.out.println(trianglePool[0].getTexture().getTextureName());
 
         this.poolTriangle = trianglePool;
     }
@@ -81,7 +83,7 @@ public class GameObject {
 
             Triangle pooledTri = this.poolTriangle[i];
 
-            originalTri.transformInPool(worldTransformMatrix, baseColor, texture, pooledTri);
+            originalTri.transformInPool(worldTransformMatrix, pooledTri);
         }
     }
 

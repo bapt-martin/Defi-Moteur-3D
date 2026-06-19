@@ -4,6 +4,7 @@ import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.math.tools.Matrix;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Texture;
+import engines.graphicEngine.scene.GameObject;
 import engines.graphicEngine.scene.lightRelative.PointLight;
 import engines.graphicEngine.scene.lightRelative.SpotLight;
 
@@ -24,20 +25,22 @@ public class Triangle {
     private Color color;
 
     private Matrix parentWorldTransformMatrix;
+    private Triangle parentTriangle = null;
 
     private final int[] xs = new int[3];
     private final int[] ys = new int[3];
 
 
     public Triangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, Color[] lights, Color color, Texture texture) {
+        this.color = (color != null) ? color : Color.WHITE;
+        this.texture = (texture != null) ? texture : Texture.WHITE_PIXEL;
+
         for (int i = 0; i < 3; i++) {
             this.vertices[i] =  verts[i];
             this.textVertices[i] = textVerts[i];
             this.normalsVertices[i] = normals[i];
-            this.lightIntensities[i] = (lights==null) ? color : lights[i];
+            this.lightIntensities[i] = (lights == null) ? color : lights[i];
         }
-        this.color = color != null ? color : Color.WHITE;
-        this.texture = texture;
     }
 
     public static Triangle createShallowTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, Color[] lights, Color color, Texture texture) {
@@ -176,12 +179,7 @@ public class Triangle {
         // Getting back the coordinate to draw the 2D triangle
         this.get2DCoordinates(xs, ys);
 
-        if (this.texture == null) {
-            this.drawTexturedTriangle(pixels, Texture.WHITE_PIXEL, winWidth, depthBuffer);
-        } else {
-            this.drawTexturedTriangle(pixels, this.texture, winWidth, depthBuffer);
-        }
-
+        this.drawTexturedTriangle(pixels, this.texture, winWidth, depthBuffer);
 //        if (isOutlineRender) {
 //            g.setColor(Color.BLACK);
 //            g.drawPolygon(xs, ys, 3);
@@ -189,33 +187,21 @@ public class Triangle {
     }
 
     public void drawTexturedTriangle(int[] pixels, Texture texture, int winWidth, float[] depthBuffer) {
-        record RasterVertex(int x, int y, float u, float v, float w, float r, float g, float b) {
-            static void swap(RasterVertex[] arr, int i, int j) {
-                RasterVertex temp = arr[i];
-                arr[i] = arr[j];
-                arr[j] = temp;
-            }
-        }
-
         Vertex3D[] verts = this.vertices;
         Vertex2D[] uvs = this.textVertices;
         Color[] lights = this.lightIntensities;
 
-        RasterVertex[] rv = {
-                new RasterVertex((int) verts[0].x, (int) verts[0].y, (float) uvs[0].u, (float) uvs[0].v, (float) uvs[0].w, (float) lights[0].getRed(), (float) lights[0].getGreen(), (float) lights[0].getBlue()),
-                new RasterVertex((int) verts[1].x, (int) verts[1].y, (float) uvs[1].u, (float) uvs[1].v, (float) uvs[1].w, (float) lights[1].getRed(), (float) lights[1].getGreen(), (float) lights[1].getBlue()),
-                new RasterVertex((int) verts[2].x, (int) verts[2].y, (float) uvs[2].u, (float) uvs[2].v, (float) uvs[2].w, (float) lights[2].getRed(), (float) lights[2].getGreen(), (float) lights[2].getBlue())
-        };
+        int i0 = 0, i1 = 1, i2 = 2;
+        if (verts[i0].y > verts[i1].y) { int temp = i0; i0 = i1; i1 = temp; }
+        if (verts[i0].y > verts[i2].y) { int temp = i0; i0 = i2; i2 = temp; }
+        if (verts[i1].y > verts[i2].y) { int temp = i1; i1 = i2; i2 = temp; }
 
-        if (rv[0].y() > rv[1].y()) RasterVertex.swap(rv, 0, 1);
-        if (rv[0].y() > rv[2].y()) RasterVertex.swap(rv, 0, 2);
-        if (rv[1].y() > rv[2].y()) RasterVertex.swap(rv, 1, 2);
-
-        int x1 = rv[0].x(), y1 = rv[0].y(); float u1 = rv[0].u(), v1 = rv[0].v(), w1 = rv[0].w(), r1 = rv[0].r(), g1 = rv[0].g(), b1 = rv[0].b();
-        int x2 = rv[1].x(), y2 = rv[1].y(); float u2 = rv[1].u(), v2 = rv[1].v(), w2 = rv[1].w(), r2 = rv[1].r(), g2 = rv[1].g(), b2 = rv[1].b();
-        int x3 = rv[2].x(), y3 = rv[2].y(); float u3 = rv[2].u(), v3 = rv[2].v(), w3 = rv[2].w(), r3 = rv[2].r(), g3 = rv[2].g(), b3 = rv[2].b();
+        int x1 = (int)verts[i0].x, y1 = (int)verts[i0].y; float u1 = (float)uvs[i0].u, v1 = (float)uvs[i0].v, w1 = (float)uvs[i0].w, r1 = (float)lights[i0].getRed(), g1 = (float)lights[i0].getGreen(), b1 = (float)lights[i0].getBlue();
+        int x2 = (int)verts[i1].x, y2 = (int)verts[i1].y; float u2 = (float)uvs[i1].u, v2 = (float)uvs[i1].v, w2 = (float)uvs[i1].w, r2 = (float)lights[i1].getRed(), g2 = (float)lights[i1].getGreen(), b2 = (float)lights[i1].getBlue();
+        int x3 = (int)verts[i2].x, y3 = (int)verts[i2].y; float u3 = (float)uvs[i2].u, v3 = (float)uvs[i2].v, w3 = (float)uvs[i2].w, r3 = (float)lights[i2].getRed(), g3 = (float)lights[i2].getGreen(), b3 = (float)lights[i2].getBlue();
 
         int total_height = y3 - y1;
+        if (total_height == 0) return;
 
         for (int i = 0; i <= total_height; i++) {
             int y = y1 + i;
@@ -253,6 +239,9 @@ public class Triangle {
     }
 
     private void drawScanline(int y, int ax, int bx, float su, float eu, float sv, float ev, float sw, float ew, float slr, float slg, float slb, float elr, float elg, float elb,  Texture texture, int[] pixels, int winWidth, float[] depthBuffer) {
+        int winHeight = depthBuffer.length / winWidth;
+        if (y < 0 || y >= winHeight) return;
+
         if (ax > bx) {
             int tempX = ax; ax = bx; bx = tempX;
             float tempU = su; su = eu; eu = tempU;
@@ -276,27 +265,35 @@ public class Triangle {
         float stepB = (elb - slb) * tstep;
 
 
-        float tex_u = su;
-        float tex_v = sv;
-        float tex_w = sw;
+        int startX = Math.max(0, ax);
+        int endX = Math.min(winWidth - 1, bx);
 
-        float l_r = slr;
-        float l_g = slg;
-        float l_b = slb;
+        if (startX > endX) return;
+        int diff = startX - ax;
+
+        float tex_u = su + (stepU * diff);
+        float tex_v = sv + (stepV * diff);
+        float tex_w = sw + (stepW * diff);
+
+        float l_r = slr + (stepR * diff);
+        float l_g = slg + (stepG * diff);
+        float l_b = slb + (stepB * diff);
+
+        int index = y * winWidth + startX;
 
         for (int j = ax; j <= bx; j++) {
-            int pixelColor = texture.getPixelRGB(tex_u / tex_w, tex_v / tex_w);
-            int finalColor = multiplyColors(pixelColor, l_r, l_g, l_b);
+            if (tex_w > depthBuffer[index]) {
+                float inverseW = 1 / tex_w;
+                int pixelColor = texture.getPixelRGB(tex_u * inverseW, tex_v * inverseW);
+                int finalColor = multiplyColors(pixelColor, l_r, l_g, l_b);
 
-            int index = y * winWidth + j;
-//            System.out.println(index +" "+pixels.length);
+//              System.out.println(index +" "+pixels.length);
 
-            if (j >= 0 && j < winWidth && index >= 0 && index < pixels.length) {
-                if (tex_w > depthBuffer[index]) {
-                    pixels[index] = finalColor;
-                    depthBuffer[index] = tex_w;
-                }
+                pixels[index] = finalColor;
+                depthBuffer[index] = tex_w;
             }
+            index++;
+
             tex_u += stepU;
             tex_v += stepV;
             tex_w += stepW;
@@ -467,16 +464,14 @@ public class Triangle {
         }
     }
 
-    public void transformInPool(Matrix matTransform, Color color, Texture texture, Triangle poolTriangle) {
+    public void transformInPool(Matrix matTransform, Triangle poolTriangle) {
         Vertex3D[] vertsTriIn = this.getVertices();
         Vertex2D[] textsVertsTriIn = this.getTextVertices();
         Vector3D[] normalsTriIn = this.getNormalsVertices();
-        Color[] colorsTriIn = this.getLightIntensities();
 
         Vertex3D[] vertsTriOut = poolTriangle.getVertices();
         Vertex2D[] textsVertsTriOut = poolTriangle.getTextVertices();
         Vector3D[] normalsTriOut = poolTriangle.getNormalsVertices();
-        Color[] colorsTriOut = poolTriangle.getLightIntensities();
 
         double[][] m = matTransform.getMatrix();
         for (int i = 0; i < 3; i++) {
@@ -487,12 +482,7 @@ public class Triangle {
             textsVertsTriOut[i].w = textsVertsTriIn[i].w;
 
             normalsTriIn[i].transformAndStoreIn(m, normalsTriOut[i]);
-
-            colorsTriOut[i] = (colorsTriIn==null) ? color : colorsTriIn[i];
         }
-
-        poolTriangle.setColor(color);
-        poolTriangle.setTexture(texture);
     }
 
     public Triangle transformed(Matrix matTransform, Color color, Texture texture) {
@@ -583,6 +573,14 @@ public class Triangle {
 
     public void setParentWorldTransformMatrix(Matrix parentWorldTransformMatrix) {
         this.parentWorldTransformMatrix = parentWorldTransformMatrix;
+    }
+
+    public Triangle getParentTriangle() {
+        return parentTriangle;
+    }
+
+    public void setParentTriangle(Triangle parentTriangle) {
+        this.parentTriangle = parentTriangle;
     }
 
     @Override

@@ -4,6 +4,7 @@ import engines.graphicEngine.core.BenchmarkManager;
 import engines.graphicEngine.core.GraphicEngine;
 import engines.graphicEngine.core.GraphicEngineContext;
 import engines.graphicEngine.input.InputManager;
+import engines.graphicEngine.math.geometry.Triangle;
 import engines.graphicEngine.overlay.HeadUpDisplay;
 import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Pipeline;
@@ -61,6 +62,7 @@ public abstract class GameEngine implements Runnable{
         this.inputManager.centerMouse();
 
         this.initGame();
+        this.pipeline.setFrameWorkQueue(new Triangle[scene.getTotalTrianglesCount()]);
 
         gameThread = new Thread(this, "GameThread");
         gameThread.start();
