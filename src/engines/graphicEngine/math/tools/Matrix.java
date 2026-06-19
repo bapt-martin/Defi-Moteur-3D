@@ -84,6 +84,21 @@ public class Matrix {
         return matScaling;
     }
 
+    public void updateWorldTransformMatrix(double sx, double sy, double sz, double theta, double phi, double psi, double x, double y, double z) {
+        double[][] m = this.getMatrix();
+
+        Matrix matScaling     = Matrix.createScalingMatrix(sx, sy, sz);
+        Matrix matRotation    = Matrix.createEulerRotation(theta,phi,psi);
+        Matrix matTranslation = Matrix.createTranslation(x,y,z);
+
+        multiply(matScaling,matRotation,matScaling);
+        multiply(matScaling,matTranslation,matScaling);
+
+        this.copyFrom(matScaling);
+
+//        matScaling.multiply(matRotation).multiply(matTranslation);
+    }
+
     public static Matrix createViewMatrix(Vertex3D pTargetPosition, Vector3D vTargetDirection, Vector3D vUp) {
         //New forward direction
         Vector3D vNewForward = new Vector3D(vTargetDirection);

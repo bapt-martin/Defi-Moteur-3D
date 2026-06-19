@@ -83,23 +83,47 @@ public class GameTest extends GameEngine {
         this.scene.addGameObject("teapot2", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot3", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot4", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot5", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot6", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot7", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot8", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot9", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot10", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot11", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot12", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot13", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot14", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot15", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot16", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot17", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot18", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot19", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot20", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot21", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot22", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot23", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot24", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot25", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot26", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot27", new GameObject(teapot, Color.WHITE));
+//        this.scene.addGameObject("teapot28", new GameObject(teapot, Color.WHITE));
+
 
 
         this.scene.addGameObject("axis1",   new GameObject(axis, Color.BLUE));
 
 
-
         this.scene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
         this.scene.addGameObject("wall", new GameObject(texturedCube,photoTexture));
+
 
         scene.getGameObject("wall").setRotation(0, 180, 0);;
         scene.getGameObject("wall").setPosition(-25, 0, 0);
         scene.getGameObject("wall").setScale(10, 10, 10);
 
-        System.out.println(this.scene.getGameObjectDirectory().get("texturedCube").getMesh().getMeshTriangle().getFirst().getTextVertices()[0].toString());
-        System.out.println(this.scene.getGameObjectDirectory().get("texturedCube").getMesh().getMeshTriangle().getFirst().getVertices()[0].toString());
 
         scene.getGameObject("texturedCube").setRotation(45, 45, 45);;
+
 
         scene.getGameObject("axis1").setPosition(0, 0, 0);
         scene.getGameObject("axis1").setScale(-0.3, 0.3, 0.3);
@@ -109,6 +133,7 @@ public class GameTest extends GameEngine {
 
         GameObject t1 = scene.getGameObject("teapot1");
         t1.setPosition(35, 0, 8);
+//        t1.setPosition(0, 0, 0);
         t1.setRotation(0, 0, 0);
         t1.setScale(10, 10, 10);
 
@@ -117,6 +142,9 @@ public class GameTest extends GameEngine {
 
     @Override
     public void updateGameLogic() {
+        boolean isFlashlightOn = graphicEngineContext.isCameraSpotOn();
+        camera.getCameraSpot().setOn(isFlashlightOn);
+
         angleTheta += 0.07;
         anglePhi += 0.01;
 
@@ -145,6 +173,9 @@ public class GameTest extends GameEngine {
 
         scene.linkLight("sun1", "sunLight1");
         scene.linkLight("sun2", "sunLight2");
+
+//        int cores = Runtime.getRuntime().availableProcessors();
+//        System.out.println("Cœurs disponibles : " + cores);
     }
 
     public static void main(String[] args) {

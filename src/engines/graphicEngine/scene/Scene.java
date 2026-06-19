@@ -1,9 +1,12 @@
 package engines.graphicEngine.scene;
 
 import engines.graphicEngine.math.geometry.Mesh;
+import engines.graphicEngine.math.geometry.Triangle;
+import engines.graphicEngine.math.tools.Matrix;
 import engines.graphicEngine.renderer.Texture;
 import engines.graphicEngine.scene.lightRelative.PointLight;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +24,10 @@ public class Scene {
     private final Map<String, PointLight> lightDirectory;
     private final List<PointLight> lightQueue;
 
+    private Triangle[] globalOriginals;
+    private Triangle[] globalPool;
+    private int totalTriangles = 0;
+
     public Scene() {
         this.meshLibrary = new HashMap<>();
         this.textureLibrary = new HashMap<>();
@@ -30,6 +37,54 @@ public class Scene {
 
         this.lightDirectory = new HashMap<>();
         this.lightQueue = new ArrayList<>();
+    }
+
+
+    // Cette méthode est à appeler UNE SEULE FOIS quand ta scène a fini de charger
+    public void buildGlobalBuffers() {
+        // 1. On compte le nombre total de triangles dans la scène
+        this.totalTriangles = 0;
+        for (GameObject obj : renderQueue) {
+            this.totalTriangles += obj.getMesh().getMeshTriangle().size();
+        }
+
+        // 2. On alloue les tableaux géants une bonne fois pour toutes
+        this.globalOriginals = new Triangle[totalTriangles];
+        this.globalPool = new Triangle[totalTriangles];
+
+        int currentIndex = 0;
+
+        // 3. On "aplatit" tous les objets
+        for (GameObject obj : renderQueue) {
+            List<Triangle> objTriangles = obj.getMesh().getMeshTriangle();
+            Matrix refMatrix = obj.getWorldTransformMatrix();
+            Color refColor = obj.getBasedColor();
+            Texture refTexture = obj.getTexture();
+
+            for (Triangle tri : objTriangles) {
+                // On injecte le contexte de l'objet dans le triangle original
+//                tri.setParentContext(refMatrix, refColor, refTexture);
+
+                this.globalOriginals[currentIndex] = tri;
+
+                // On crée le brouillon (Deep Clone) directement dans le grand pool
+                this.globalPool[currentIndex] = tri.deepClone();
+
+                currentIndex++;
+            }
+        }
+    }
+
+    public Triangle[] getGlobalOriginals() { return globalOriginals; }
+    public Triangle[] getGlobalPool() { return globalPool; }
+    public int getTotalTriangles() { return totalTriangles; }
+
+    public int getTotalTrianglesCount() {
+        int count = 0;
+        for (GameObject obj : renderQueue) {
+            count += obj.getPoolTriangle().length;
+        }
+        return count;
     }
 
     public void linkLight(String gameObjectName, String lightName) {

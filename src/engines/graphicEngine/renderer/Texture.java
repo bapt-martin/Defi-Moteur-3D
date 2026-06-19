@@ -11,6 +11,9 @@ public class Texture {
     private String textureName;
     private int width;
     private int height;
+    private int widthMinusOne, heightMinusOne;
+    private int[] pixels;
+
     public static final Texture WHITE_PIXEL = createWhitePixel();
 
     public Texture() {
@@ -25,6 +28,11 @@ public class Texture {
             this.image = ImageIO.read(new File(filepath));
             this.width = image.getWidth();
             this.height = image.getHeight();
+            this.widthMinusOne = width - 1;
+            this.heightMinusOne = height - 1;
+            this.pixels = new int[width * height];
+
+            image.getRGB(0, 0, width, height, this.pixels, 0, width);
         } catch (IOException e) {
             System.err.println("Texture loading failed : " + filepath);
             e.printStackTrace();
@@ -32,15 +40,15 @@ public class Texture {
     }
 
     public int getPixelRGB(double u, double v) {
-        if (image == null) return 0xFF000000;
+        if (pixels == null) return 0x00000000;
 
-        u = Math.max(0.0, Math.min(1.0, u));
-        v = Math.max(0.0, Math.min(1.0, v));
+        if (u < 0.0) u = 0.0; else if (u > 1.0) u = 1.0;
+        if (v < 0.0) v = 0.0; else if (v > 1.0) v = 1.0;
 
-        int x = (int) (u * (width - 1));
-        int y = (int) ((1.0 - v) * (height - 1));
+        int x = (int) (u * widthMinusOne);
+        int y = (int) ((1.0 - v) * heightMinusOne);
 
-        return image.getRGB(x, y);
+        return pixels[x + y * width];
     }
 
     public void printPixelColor(double u, double v) {
@@ -58,15 +66,27 @@ public class Texture {
 
     private static Texture createWhitePixel() {
         Texture t = new Texture();
-        t.width = 1;
-        t.height = 1;
+
         t.image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
         t.image.setRGB(0, 0, 0xFFFFFF);
+
+        t.width = t.image.getWidth();
+        t.height = t.image.getHeight();
+        t.widthMinusOne = t.width - 1;
+        t.heightMinusOne = t.height - 1;
+        t.pixels = new int[t.width * t.height];
+
+        t.image.getRGB(0, 0, t.width, t.height, t.pixels, 0, t.width);
+
         return t;
     }
 
     public String getTextureName() {
-        return textureName;
+        if (textureName == null){
+            return "NaN";
+        } else {
+            return textureName;
+        }
     }
 
     public void setTextureName(String textureName) {

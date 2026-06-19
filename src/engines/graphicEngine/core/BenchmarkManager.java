@@ -188,7 +188,7 @@ public class BenchmarkManager {
     }
 
     private void saveResultsToCSV() {
-        String filepath = "src/engines.graphicEngine/io/benchmarkResults.csv";
+        String filepath = "C:\\Users\\marti\\IdeaProjects\\Defi V5\\src\\engines\\graphicEngine\\io\\benchmarkResults.csv";
         File file = new File(filepath);
         boolean fileExists = file.exists();
 

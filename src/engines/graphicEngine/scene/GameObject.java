@@ -1,14 +1,18 @@
 package engines.graphicEngine.scene;
 
 import engines.graphicEngine.math.geometry.Mesh;
+import engines.graphicEngine.math.geometry.Triangle;
 import engines.graphicEngine.math.tools.Matrix;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Texture;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GameObject {
     private Mesh mesh;
+    private Triangle[] poolTriangle;
     private Texture texture;
     private Color basedColor = Color.WHITE;
     private Matrix worldTransformMatrix;
@@ -24,11 +28,11 @@ public class GameObject {
 
     public GameObject(Mesh mesh) {
         this.mesh = mesh;
-        this.texture  = null;
         this.scale    = new Vector3D(1,1,1);
         this.rotation = new Vector3D();
         this.position = new Vector3D();
-        this.updateWorldTransformMatrix();
+        this.creatWorldTransformMatrix();
+        this.createTrianglePool();
     }
 
     public GameObject(Mesh mesh, Texture texture) {
@@ -37,7 +41,8 @@ public class GameObject {
         this.scale    = new Vector3D(1,1,1);
         this.rotation = new Vector3D();
         this.position = new Vector3D();
-        this.updateWorldTransformMatrix();
+        this.creatWorldTransformMatrix();
+        this.createTrianglePool();
     }
 
     public GameObject(Mesh mesh, Color color) {
@@ -46,11 +51,50 @@ public class GameObject {
         this.scale    = new Vector3D(1,1,1);
         this.rotation = new Vector3D();
         this.position = new Vector3D();
-        this.updateWorldTransformMatrix();
+        this.creatWorldTransformMatrix();
+        this.createTrianglePool();
+    }
+
+    public void createTrianglePool() {
+        List<Triangle> meshTriangle = this.mesh.getMeshTriangle();
+        int size = meshTriangle.size();
+        Triangle[] trianglePool = new Triangle[size];
+
+        Matrix parentWorldTransformMatrix = this.getWorldTransformMatrix();
+
+        for (int i=0; i<size; i++) {
+            trianglePool[i] = meshTriangle.get(i).deepClone();
+            trianglePool[i].setParentWorldTransformMatrix(parentWorldTransformMatrix);
+//            System.out.println(trianglePool[0].getTexture().getTextureName());
+        }
+
+
+        this.poolTriangle = trianglePool;
+    }
+
+    public void updateTrianglePool(Matrix worldTransformMatrix, Color baseColor, Texture texture) {
+        List<Triangle> meshTriangle = this.mesh.getMeshTriangle();
+        int size = meshTriangle.size();
+        for (int i = 0; i < size; i++) {
+
+            Triangle originalTri = meshTriangle.get(i);
+
+            Triangle pooledTri = this.poolTriangle[i];
+
+            originalTri.transformInPool(worldTransformMatrix, baseColor, texture, pooledTri);
+        }
+    }
+
+    public void creatWorldTransformMatrix() {
+        this.worldTransformMatrix = Matrix.createWorldTransformMatrix(
+                scale.getX(),    scale.getY(),    scale.getZ(),
+                rotation.getX(), rotation.getY(), rotation.getZ(),
+                position.getX(), position.getY(), position.getZ()
+        );
     }
 
     public void updateWorldTransformMatrix() {
-        this.worldTransformMatrix = Matrix.createWorldTransformMatrix(
+        this.worldTransformMatrix.updateWorldTransformMatrix(
                 scale.getX(),    scale.getY(),    scale.getZ(),
                 rotation.getX(), rotation.getY(), rotation.getZ(),
                 position.getX(), position.getY(), position.getZ()
@@ -102,20 +146,6 @@ public class GameObject {
     public Mesh getMesh() {
         return mesh;
     }
-
-//    public List<Triangle> getMeshTriangle() {
-//        List<Triangle> gameObjectTriangles = mesh.getMeshTriangle();
-//        if (isBasedColorChanged) {
-//            for (Triangle triangle : gameObjectTriangles) {
-//                triangle.setColor(this.basedColor);
-//            }
-//            isBasedColorChanged = false;
-//        }
-//
-//        return gameObjectTriangles;
-//    }
-
-
 
     public Matrix getWorldTransformMatrix() {
         if (isDirty) {
@@ -180,5 +210,9 @@ public class GameObject {
 
     public Vector3D getPosition() {
         return position;
+    }
+
+    public Triangle[] getPoolTriangle() {
+        return poolTriangle;
     }
 }

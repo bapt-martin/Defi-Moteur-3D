@@ -93,10 +93,11 @@
                                 triUVs[2] = new Vertex2D(0, 0);
                             }
 
-                        meshTriangles.add(new Triangle(triVerts, triUVs, triNormals, Color.WHITE));
+                        meshTriangles.add(Triangle.createShallowTriangle(triVerts, triUVs, triNormals, Color.WHITE));
                         }
                     }
                 }
+
                 mesh.createTriangleNormal();
 
                 return mesh;

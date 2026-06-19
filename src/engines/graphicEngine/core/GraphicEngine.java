@@ -41,10 +41,6 @@ public class GraphicEngine extends Canvas {
         this.checkAndResizeBuffer();
 
         java.util.Arrays.fill(pixels, this.getBackground().getRGB());
-//        Graphics g = this.getGraphics();
-
-//        g.setColor(this.getBackground());
-//        g.fillRect(0, 0, getWidth(), getHeight());
 
         camera.updateWindowProjectionMatrix();
         camera.updateProjectionMatrix();
@@ -84,6 +80,7 @@ public class GraphicEngine extends Canvas {
             this.frameBuffer = new BufferedImage(currentWidth, currentHeight, BufferedImage.TYPE_INT_RGB);
             System.out.println("Buffer : " + frameBuffer.getWidth() + "x" + frameBuffer.getHeight() +
                     " | Pixels[] : " + pixels.length);
+
             this.pixels = ((java.awt.image.DataBufferInt) frameBuffer.getRaster().getDataBuffer()).getData();
 
             this.createBufferStrategy(3);

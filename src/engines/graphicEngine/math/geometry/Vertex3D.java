@@ -86,6 +86,19 @@ public class Vertex3D extends Tuple3D {
         return this;
     }
 
+    public void transformAndStoreIn(double[][] m, Vertex3D destinationVertex) {
+
+        double newX = this.x * m[0][0] + this.y * m[1][0] + this.z * m[2][0] + this.w * m[3][0];
+        double newY = this.x * m[0][1] + this.y * m[1][1] + this.z * m[2][1] + this.w * m[3][1];
+        double newZ = this.x * m[0][2] + this.y * m[1][2] + this.z * m[2][2] + this.w * m[3][2];
+        double newW = this.x * m[0][3] + this.y * m[1][3] + this.z * m[2][3] + this.w * m[3][3];
+
+        destinationVertex.x = newX;
+        destinationVertex.y = newY;
+        destinationVertex.z = newZ;
+        destinationVertex.w = newW;
+    }
+
     @Override
     public String toString() {
         return "engine.math.geometry.Vertex3D{" +

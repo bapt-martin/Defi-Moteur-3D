@@ -1,5 +1,7 @@
 package engines.graphicEngine.math.tools;
 
+import engines.graphicEngine.math.geometry.Vertex3D;
+
 public class Vector3D extends Tuple3D{
     public Vector3D() {
         super(0,0,0,0);
@@ -71,6 +73,21 @@ public class Vector3D extends Tuple3D{
     @Override
     public Vector3D add(Tuple3D other) {
         return new Vector3D(this.x + other.x, this.y + other.y, this.z + other.z);
+    }
+
+    public void transformAndStoreIn(double[][] m, Vector3D destinationVertex) {
+
+        double newX = this.x * m[0][0] + this.y * m[1][0] + this.z * m[2][0];
+        double newY = this.x * m[0][1] + this.y * m[1][1] + this.z * m[2][1];
+        double newZ = this.x * m[0][2] + this.y * m[1][2] + this.z * m[2][2];
+
+        destinationVertex.x = newX;
+        destinationVertex.y = newY;
+        destinationVertex.z = newZ;
+
+        if (newX != 0.0 || newY != 0.0 || newZ != 0.0) {
+            destinationVertex.normalizeInPlace();
+        }
     }
 
     public void addInPlace(Tuple3D other) {
