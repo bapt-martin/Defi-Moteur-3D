@@ -30,20 +30,24 @@ public class GameTest extends GameEngine {
                 new Camera.CameraRotation(0, 0, 0),
                 new Vector3D(0, 0, 1),
                 new Vector3D(0, 1, 0),
-                new Plane(new Vertex3D(0, 0, 0.1), new Vector3D(0, 0, 1)),
+                new Plane(new Vertex3D(0, 0, 0.1f), new Vector3D(0, 0, 1)),
                 new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
-                0.1,50,90,
-                0.005, Color.WHITE, 15);
+                0.1f,50,90,
+                0.005f, Color.WHITE, 15);
 
         scene.addLight("cameraSpotLight", this.camera.getCameraSpot());
 
-        Mesh teapot = ObjLoader.readObjFile(Paths.get("obj model\\objTextureLess\\teapot.obj"));
-        Mesh axis = ObjLoader.readObjFile(Paths.get("obj model\\objTextureLess\\axis.obj"));
-        Mesh centeredCube = ObjLoader.readObjFile(Paths.get("obj model\\objTextureLess\\cube.obj"));
-        Mesh outCenteredCube = ObjLoader.readObjFile(Paths.get("obj model\\objTextureLess\\cube pas centré.obj"));
-        Mesh texturedCube = ObjLoader.readObjFile(Paths.get("obj model\\objWithTexture\\cubeTexture.obj"));
-        Mesh texturedSphere = ObjLoader.readObjFile(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
+        long start = System.nanoTime();
+        Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
+        Mesh axis            = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\axis.obj"));
+        Mesh centeredCube    = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube.obj"));
+        Mesh outCenteredCube = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube pas centré.obj"));
+        Mesh texturedCube    = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\cubeTexture.obj"));
+        Mesh texturedSphere  = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
 //        new Scene.MeshData("F1","obj model\\F1.obj")
+        long end = System.nanoTime();
+
+        System.out.println((end - start) / 1_000_000.0 + " ms");
 
         this.scene.addMesh("teapot", teapot);
         this.scene.addMesh("axis", axis);
@@ -63,7 +67,7 @@ public class GameTest extends GameEngine {
 
         PointLight sun1 = new PointLight(
                 new Vector3D(10, 5, 0),
-                0.05,
+                0.05f,
                 new Color(255, 180, 50)
         );
         scene.addLight("sunLight1", sun1);
@@ -72,7 +76,7 @@ public class GameTest extends GameEngine {
 
         PointLight sun2 = new PointLight(
                 new Vector3D(-10, 5, 0),
-                0.05,
+                0.05f,
                 new Color(255, 180, 50)
         );
         scene.addLight("sunLight2", sun2);
@@ -89,7 +93,7 @@ public class GameTest extends GameEngine {
         this.scene.addGameObject("teapot8", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot9", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot10", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot11", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot11", new GameObject(teapot, Color.WHITE));
 //        this.scene.addGameObject("teapot12", new GameObject(teapot, Color.WHITE));
 //        this.scene.addGameObject("teapot13", new GameObject(teapot, Color.WHITE));
 //        this.scene.addGameObject("teapot14", new GameObject(teapot, Color.WHITE));
@@ -126,7 +130,7 @@ public class GameTest extends GameEngine {
 
 
         scene.getGameObject("axis1").setPosition(0, 0, 0);
-        scene.getGameObject("axis1").setScale(-0.3, 0.3, 0.3);
+        scene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
 
 
 
@@ -151,16 +155,16 @@ public class GameTest extends GameEngine {
         double r = 11.0;
 
         double hR = r * Math.cos(anglePhi);
-        double x = hR * Math.cos(angleTheta/2);
-        double y = r * Math.sin(anglePhi);
-        double z = hR * Math.sin(angleTheta);
+        float x = (float) (hR * Math.cos(angleTheta/2));
+        float y = (float) (r * Math.sin(anglePhi));
+        float z = (float) (hR * Math.sin(angleTheta));
 
-        double sX = 1.0 + (0.5 * Math.sin(anglePhi));
-        double sY = 1.0 + (0.5 * Math.sin(angleTheta));
-        double sZ = 1.0 + (0.5 * Math.cos(anglePhi));
+        float sX = (float) (1.0 + (0.5 * Math.sin(anglePhi)));
+        float sY = (float) (1.0 + (0.5 * Math.sin(angleTheta)));
+        float sZ = (float) (1.0 + (0.5 * Math.cos(anglePhi)));
 
         scene.getGameObject("texturedCube").setScale(sX, sY, sZ);
-        scene.getGameObject("texturedCube").rotate(0.5,1,1.5);
+        scene.getGameObject("texturedCube").rotate(0.5f,1,1.5f);
         scene.getGameObject("texturedCube").setPosition(x, y, z);
 
         scene.getGameObject("sun1").setPosition(x, 5, z);
@@ -174,8 +178,6 @@ public class GameTest extends GameEngine {
         scene.linkLight("sun1", "sunLight1");
         scene.linkLight("sun2", "sunLight2");
 
-//        int cores = Runtime.getRuntime().availableProcessors();
-//        System.out.println("Cœurs disponibles : " + cores);
     }
 
     public static void main(String[] args) {

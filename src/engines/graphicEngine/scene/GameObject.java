@@ -69,7 +69,7 @@ public class GameObject {
             trianglePool[i].setParentWorldTransformMatrix(parentWorldTransformMatrix);
         }
 
-            System.out.println(trianglePool[0].getTexture().getTextureName());
+//        System.out.println(trianglePool[0].getTexture().getTextureName());
 
         this.poolTriangle = trianglePool;
     }

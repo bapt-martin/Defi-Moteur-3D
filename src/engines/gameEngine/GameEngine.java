@@ -68,6 +68,23 @@ public abstract class GameEngine implements Runnable{
         gameThread.start();
     }
 
+    public synchronized void stop() {
+        if (!graphicEngineContext.isRunning()) return;
+
+        graphicEngineContext.setRunning(false);
+
+        if (gameThread != null && Thread.currentThread() != gameThread) {
+            try {
+                gameThread.join(2000);
+            } catch (InterruptedException e) {
+                System.err.println("-> [ERREUR] Interruption lors de l'attente du thread de jeu.");
+                Thread.currentThread().interrupt();
+            }
+        }
+        this.pipeline.shutdown();
+        System.exit(0);
+    }
+
     @Override
     public void run() {
         this.graphicEngineContext.updateWindowInformation();
@@ -109,6 +126,10 @@ public abstract class GameEngine implements Runnable{
                 graphicEngineContext.setCurrentFPS(currentFPS);
                 currentUPS = 0;
                 currentFPS = 0;
+            }
+
+            if (elapsedTime >= 2.0) {
+                this.stop();
             }
         }
     }

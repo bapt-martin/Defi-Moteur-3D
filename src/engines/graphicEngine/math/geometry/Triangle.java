@@ -114,18 +114,22 @@ public class Triangle {
         Vertex3D[] vertsIn = this.getVertices();
         Vertex2D[] textVertsIn = this.getTextVertices();
 
-        textVertsIn[0].u = textVertsIn[0].u / vertsIn[0].w;
-        textVertsIn[1].u = textVertsIn[1].u / vertsIn[1].w;
-        textVertsIn[2].u = textVertsIn[2].u / vertsIn[2].w;
+        double invW0 = 1 / vertsIn[0].w;
+        double invW1 = 1 / vertsIn[1].w;
+        double invW2 = 1 / vertsIn[2].w;
 
-        textVertsIn[0].v = textVertsIn[0].v / vertsIn[0].w;
-        textVertsIn[1].v = textVertsIn[1].v / vertsIn[1].w;
-        textVertsIn[2].v = textVertsIn[2].v / vertsIn[2].w;
+        textVertsIn[0].u = textVertsIn[0].u * invW0;
+        textVertsIn[1].u = textVertsIn[1].u * invW1;
+        textVertsIn[2].u = textVertsIn[2].u * invW2;
+
+        textVertsIn[0].v = textVertsIn[0].v * invW0;
+        textVertsIn[1].v = textVertsIn[1].v * invW1;
+        textVertsIn[2].v = textVertsIn[2].v * invW2;
 
 
-        textVertsIn[0].w = 1 / vertsIn[0].w;
-        textVertsIn[1].w = 1 / vertsIn[1].w;
-        textVertsIn[2].w = 1 / vertsIn[2].w;
+        textVertsIn[0].w = invW0;
+        textVertsIn[1].w = invW1;
+        textVertsIn[2].w = invW2;
 
 
         vertsIn[0].divideInPlace(vertsIn[0].w);
@@ -238,6 +242,70 @@ public class Triangle {
         }
     }
 
+    public void drawTexturedTriangleMultiThreaded2(int[] pixels, int winWidth, float[] depthBuffer, int threadMinY, int threadMaxY) {
+        Vertex3D[] verts = this.vertices;
+        Vertex2D[] uvs = this.textVertices;
+        Color[] lights = this.lightIntensities;
+
+        int i0 = 0, i1 = 1, i2 = 2;
+        if (verts[i0].y > verts[i1].y) { int temp = i0; i0 = i1; i1 = temp; }
+        if (verts[i0].y > verts[i2].y) { int temp = i0; i0 = i2; i2 = temp; }
+        if (verts[i1].y > verts[i2].y) { int temp = i1; i1 = i2; i2 = temp; }
+
+        int x1 = (int)verts[i0].x, y1 = (int)verts[i0].y; float u1 = (float)uvs[i0].u, v1 = (float)uvs[i0].v, w1 = (float)uvs[i0].w, r1 = (float)lights[i0].getRed(), g1 = (float)lights[i0].getGreen(), b1 = (float)lights[i0].getBlue();
+        int x2 = (int)verts[i1].x, y2 = (int)verts[i1].y; float u2 = (float)uvs[i1].u, v2 = (float)uvs[i1].v, w2 = (float)uvs[i1].w, r2 = (float)lights[i1].getRed(), g2 = (float)lights[i1].getGreen(), b2 = (float)lights[i1].getBlue();
+        int x3 = (int)verts[i2].x, y3 = (int)verts[i2].y; float u3 = (float)uvs[i2].u, v3 = (float)uvs[i2].v, w3 = (float)uvs[i2].w, r3 = (float)lights[i2].getRed(), g3 = (float)lights[i2].getGreen(), b3 = (float)lights[i2].getBlue();
+
+        int total_height = y3 - y1;
+        if (total_height == 0) return;
+
+        // 🎯 L'OPTIMISATION DU CLAMPING : On calcule la zone d'intersection exacte
+        int startY = Math.max(y1, threadMinY);
+        int endY = Math.min(y3, threadMaxY);
+
+        // Sécurité : Si le triangle ne touche pas du tout la bande (impossible avec un bon Binning, mais vital en sécurité)
+        if (startY > endY) return;
+
+        // On convertit les coordonnées absolues Y en index relatif "i" pour la boucle d'interpolation
+        int startI = startY - y1;
+        int endI = endY - y1;
+
+        // LA BOUCLE CHIRURGICALE : Elle ne fait plus AUCUN tour dans le vide, et n'a plus de 'if' !
+        for (int i = startI; i <= endI; i++) {
+            int y = y1 + i;
+
+            boolean isSecondHalf = i > (y2 - y1) || y2 == y1;
+            int segment_height = isSecondHalf ? (y3 - y2) : (y2 - y1);
+
+            if (segment_height == 0) continue;
+
+            // La magie opère : 'i' est resté correct, donc alpha et beta se calculent parfaitement
+            float alpha = (float) i / total_height;
+            float beta  = (float) (i - (isSecondHalf ? y2 - y1 : 0)) / segment_height;
+
+            int ax = x1 + (int)((x3 - x1) * alpha);
+            float tex_au = u1 + (u3 - u1) * alpha;
+            float tex_av = v1 + (v3 - v1) * alpha;
+            float tex_aw = w1 + (w3 - w1) * alpha;
+
+            float l_ar = r1 + ((r3 - r1) * alpha);
+            float l_ag = g1 + ((g3 - g1) * alpha);
+            float l_ab = b1 + ((b3 - b1) * alpha);
+
+            int bx = isSecondHalf ? x2 + (int)((x3 - x2) * beta) : x1 + (int)((x2 - x1) * beta);
+            float tex_bu = isSecondHalf ? u2 + (u3 - u2) * beta : u1 + (u2 - u1) * beta;
+            float tex_bv = isSecondHalf ? v2 + (v3 - v2) * beta : v1 + (v2 - v1) * beta;
+            float tex_bw = isSecondHalf ? w2 + (w3 - w2) * beta : w1 + (w2 - w1) * beta;
+
+            float l_br = isSecondHalf ? r2 + (r3 - r2) * beta : r1 + (r2 - r1) * beta;
+            float l_bg = isSecondHalf ? g2 + (g3 - g2) * beta : g1 + (g2 - g1) * beta;
+            float l_bb = isSecondHalf ? b2 + (b3 - b2) * beta : b1 + (b2 - b1) * beta;
+
+            // Appel au Scanline (qui est lui aussi déjà optimisé/clampé en X)
+            drawScanline(y, ax, bx, tex_au, tex_bu, tex_av, tex_bv, tex_aw, tex_bw, l_ar, l_ag, l_ab, l_br, l_bg, l_bb, this.texture, pixels, winWidth, depthBuffer);
+        }
+    }
+
     private void drawScanline(int y, int ax, int bx, float su, float eu, float sv, float ev, float sw, float ew, float slr, float slg, float slb, float elr, float elg, float elb,  Texture texture, int[] pixels, int winWidth, float[] depthBuffer) {
         int winHeight = depthBuffer.length / winWidth;
         if (y < 0 || y >= winHeight) return;
@@ -327,8 +395,16 @@ public class Triangle {
         this.scaleInPlaceY(-1);
 
         // Offset into visible normalized space
-        Vector3D vOffsetView = new Vector3D(1,1,0);
-        this.translateInPlace(vOffsetView);
+        Vertex3D[] vertsIn = this.getVertices();
+
+        vertsIn[0].x = vertsIn[0].x + 1;
+        vertsIn[0].y = vertsIn[0].y + 1;
+
+        vertsIn[1].x = vertsIn[1].x + 1;
+        vertsIn[1].y = vertsIn[1].y + 1;
+
+        vertsIn[2].x = vertsIn[2].x + 1;
+        vertsIn[2].y = vertsIn[2].y + 1;
 
         // Scaling to screen dimension
         this.scaleInPlaceX(0.5 * iWinWidth);
