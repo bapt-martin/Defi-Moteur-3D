@@ -16,6 +16,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static engines.graphicEngine.renderer.Rasterizer.*;
 
 public class Pipeline {
     private final Camera camera;
@@ -23,7 +26,7 @@ public class Pipeline {
     private final GraphicEngineContext graphicEngineContext;
 
     private Matrix viewMatrix;
-    private List<Triangle> processedTriangle;
+    private List<Triangle> geometryProcessedTri;
     private List<Triangle> trisToRender;
 
     List<Triangle> clippedTrianglesBuffer = new ArrayList<>();
@@ -35,10 +38,25 @@ public class Pipeline {
     private final ExecutorService executor;
     private int numThreads;
 
-    private Triangle[] frameWorkQueue;
+    private Triangle[] geometryProcessingQueue;
     private int trianglesToProcessCount = 0;
 
     private long[] threadActiveTimes;
+
+    private Tile[] tilesPool;
+
+    public static class Tile {
+        public final int minX, maxX;
+        public final int minY, maxY;
+        public final List<Triangle> triToRaster = new ArrayList<>();
+
+        public Tile(int minX, int maxX, int minY, int maxY) {
+            this.minX = minX;
+            this.maxX = maxX;
+            this.minY = minY;
+            this.maxY = maxY;
+        }
+    }
 
     public Pipeline(Camera camera, Scene scene, GraphicEngineContext graphicEngineContext) {
         this.camera = camera;
@@ -46,13 +64,15 @@ public class Pipeline {
         this.graphicEngineContext = graphicEngineContext;
         this.depthBuffer = new float[graphicEngineContext.getWindowHeight() * graphicEngineContext.getWindowWidth()];
         this.updateViewMatrix();
-        this.processedTriangle = new ArrayList<>();
+        this.geometryProcessedTri = new ArrayList<>();
         this.trisToRender = new ArrayList<>();
 
         this.threadActiveTimes = new long[15];
 
         this.updateNumThreads(8);
         this.executor = Executors.newFixedThreadPool(this.numThreads);
+
+        this.updateTilesPool(32);
     }
 
     public void execution(int[] pixels ) {
@@ -63,7 +83,8 @@ public class Pipeline {
         this.processAllGeometryMultiThreaded();
 //        this.processAllGeometry();
 
-        this.rasterizePassMultiThreaded(pixels);
+        this.rasterizePassMultiThreadedTBR(pixels);
+//        this.rasterizePassMultiThreaded(pixels);
 //        this.rasterizePass(pixels);
     }
 
@@ -72,7 +93,7 @@ public class Pipeline {
     }
 
     public void processAllGeometryMultiThreaded() {
-        this.processedTriangle.clear();
+        this.geometryProcessedTri.clear();
         this.trianglesToProcessCount = 0;
 
         for (GameObject obj : scene.getRenderQueue()) {
@@ -84,7 +105,7 @@ public class Pipeline {
             Triangle[] poolTriangle = obj.getPoolTriangle();
 
             for (Triangle t : poolTriangle) {
-                this.frameWorkQueue[this.trianglesToProcessCount] = t;
+                this.geometryProcessingQueue[this.trianglesToProcessCount] = t;
                 this.trianglesToProcessCount++;
             }
         }
@@ -98,6 +119,7 @@ public class Pipeline {
 
         List<PointLight> lightQueue = scene.getLightQueue();
 
+
         List<Future<List<Triangle>>> futures = new ArrayList<>();
         int chunkSize = this.trianglesToProcessCount / this.numThreads;
 
@@ -107,36 +129,33 @@ public class Pipeline {
 
             futures.add(executor.submit(() -> {
 
-                List<Triangle> bufferSingleThreadProcessedTriangle = new ArrayList<>();
+                List<Triangle> localProcessedTriBuffer = new ArrayList<>();
                 List<Triangle> localClippedWorker = new ArrayList<>();
 
                 for (int j = startIdx; j < endIdx; j++) {
-
-                    Triangle pooledTri = this.frameWorkQueue[j];
+                    Triangle pooledTri = this.geometryProcessingQueue[j];
 
                     Matrix worldTransformMatrix = pooledTri.getParentWorldTransformMatrix();
-
                     pooledTri.getParentTriangle().transformInPool(worldTransformMatrix, pooledTri);
 
                     boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
-                    if (!pooledTri.isFacing(this.camera, isFlipped)) {
+                    if (!isFacing(this.camera, isFlipped, pooledTri)) {
                         continue;
                     }
 
-
-                    pooledTri.setLighting(lightQueue, isFlipped);
+                    computeGouraudLighting(lightQueue, isFlipped, pooledTri);
 
                     pooledTri.transformVertexInPlace(this.viewMatrix);
 
-                    this.clipAndProjectMultiThreaded(projectionMatrix, frontClippingPlane, farClippingPlane, pooledTri, bufferSingleThreadProcessedTriangle, localClippedWorker);
+                    this.clipAndProjectMultiThreaded(projectionMatrix, frontClippingPlane, farClippingPlane, pooledTri, localProcessedTriBuffer, localClippedWorker);
                 }
-                return bufferSingleThreadProcessedTriangle;
+                return localProcessedTriBuffer;
             }));
         }
 
         for (Future<List<Triangle>> future : futures) {
             try {
-                this.processedTriangle.addAll(future.get());
+                this.geometryProcessedTri.addAll(future.get());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -157,12 +176,12 @@ public class Pipeline {
         int endIndex = localResultBuffer.size();
 
         for (int i = startIndex; i < endIndex; i++) {
-            localResultBuffer.get(i).projectToScreenInPlace(projectionMatrix, graphicEngineContext.getWindowWidth(), graphicEngineContext.getWindowHeight());
+            projectToScreenInPlace(projectionMatrix, graphicEngineContext.getWindowWidth(), graphicEngineContext.getWindowHeight(), localResultBuffer.get(i));
         }
     }
 
     public void processAllGeometry() {
-        this.processedTriangle.clear();
+        this.geometryProcessedTri.clear();
         this.trianglesToProcessCount = 0;
 
         Matrix projectionMatrix = this.camera.getProjectionMatrix();
@@ -204,11 +223,11 @@ public class Pipeline {
 
         boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
 
-        if (!pooledTri.isFacing(this.camera,isFlipped)) {
+        if (!isFacing(this.camera, isFlipped, pooledTri)) {
             return;
         }
 
-        pooledTri.setLighting(lightQueue, isFlipped);
+        computeGouraudLighting(lightQueue, isFlipped, pooledTri);
 
         pooledTri.transformVertexInPlace(viewMatrix);
 
@@ -220,24 +239,139 @@ public class Pipeline {
 
         frontClippingPlane.clipTriangleAgainstPlane(triTransformed, this.clippedTrianglesBuffer);
 
-        int startIndex = this.processedTriangle.size();
+        int startIndex = this.geometryProcessedTri.size();
 
         for (Triangle frontTri : this.clippedTrianglesBuffer) {
-            farClippingPlane.clipTriangleAgainstPlane(frontTri, this.processedTriangle);
+            farClippingPlane.clipTriangleAgainstPlane(frontTri, this.geometryProcessedTri);
         }
 
-        int endIndex = this.processedTriangle.size();
+        int endIndex = this.geometryProcessedTri.size();
 
         for (int i = startIndex; i < endIndex; i++) {
-            this.processedTriangle.get(i).projectToScreenInPlace(projectionMatrix, graphicEngineContext.getWindowWidth(), graphicEngineContext.getWindowHeight());
+            projectToScreenInPlace(projectionMatrix, graphicEngineContext.getWindowWidth(), graphicEngineContext.getWindowHeight(), this.geometryProcessedTri.get(i));
         }
     }
+
+    public void updateTilesPool(int tilesSize) {
+        int winWidth = graphicEngineContext.getWindowWidth();
+        int winHeight = graphicEngineContext.getWindowHeight();
+
+        int cols = (int) Math.ceil((double) winWidth  / tilesSize);
+        int rows = (int) Math.ceil((double) winHeight / tilesSize);
+        int totalTiles = cols * rows;
+        if(totalTiles != this.tilesPool.length) {
+            this.tilesPool = new Tile[totalTiles];
+            for (int y = 0; y < rows; y++) {
+                for (int x = 0; x < cols; x++) {
+                    int minX = x * tilesSize;
+                    int maxX = Math.min(winWidth - 1, (x + 1) * tilesSize - 1);
+                    int minY = y * tilesSize;
+                    int maxY = Math.min(winHeight - 1, (y + 1) * tilesSize - 1);
+
+                    this.tilesPool[y * cols + x] = new Tile(minX, maxX, minY, maxY);
+                }
+            }
+        }
+    }
+
+    public void rasterizePassMultiThreadedTBR(int[] pixels) {
+        int winWidth = graphicEngineContext.getWindowWidth();
+        int winHeight = graphicEngineContext.getWindowHeight();
+
+        int tilesSize = 32;
+        this.updateTilesPool(tilesSize);
+        int cols = (int) Math.ceil((double) winWidth  / tilesSize);
+        int rows = (int) Math.ceil((double) winHeight / tilesSize);
+        int totalTiles = cols * rows;
+
+
+        int triangleCount = geometryProcessedTri.size();
+        if (triangleCount < 300) {
+            this.numThreads = 1;
+        } else if (triangleCount < 1500) {
+            this.numThreads = Math.min(4, Runtime.getRuntime().availableProcessors());
+        } else {
+            this.updateNumThreads(1);
+        }
+
+
+        for (Triangle triToClip : geometryProcessedTri) {
+            this.clipToScreen(triToClip);
+
+            for (Triangle clippedTri : trisToRender) {
+                Vertex3D[] vertices = clippedTri.getVertices();
+
+                double minX = Math.min(vertices[0].x, Math.min(vertices[1].x, vertices[2].x));
+                double maxX = Math.max(vertices[0].x, Math.max(vertices[1].x, vertices[2].x));
+                double minY = Math.min(vertices[0].y, Math.min(vertices[1].y, vertices[2].y));
+                double maxY = Math.max(vertices[0].y, Math.max(vertices[1].y, vertices[2].y));
+
+                int startTileX = Math.max(0, (int) (minX / tilesSize));
+                int endTileX   = Math.min(cols - 1, (int) (maxX / tilesSize));
+                int startTileY = Math.max(0, (int) (minY / tilesSize));
+                int endTileY   = Math.min(rows - 1, (int) (maxY / tilesSize));
+
+                for (int ty = startTileY; ty <= endTileY; ty++) {
+                    for (int tx = startTileX; tx <= endTileX; tx++) {
+                        this.tilesPool[ty * cols + tx].triToRaster.add(clippedTri);
+                    }
+                }
+            graphicEngineContext.incrementTriangleCount(trisToRender.size());
+            }
+        }
+
+        executeDynamicTiledRasterization(this.tilesPool, pixels, winWidth, depthBuffer);
+    }
+
+    private void executeDynamicTiledRasterization(Tile[] tiles, int[] pixels, int winWidth, float[] depthBuffer) {
+        List<Future<?>> futures = new ArrayList<>();
+
+        AtomicInteger nextTileIndex = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        for (int i = 0; i < numThreads; i++) {
+            futures.add(executor.submit(() -> {
+                int tileIdx;
+
+                while ((tileIdx = nextTileIndex.getAndIncrement()) < tiles.length) {
+                    Tile tile = tiles[tileIdx];
+                    if (tile.triToRaster.isEmpty()) {
+                        continue;
+                    }
+
+                    for (Triangle triToDraw : tile.triToRaster) {
+                        drawTexturedTriangleTiled(
+                                pixels, winWidth, depthBuffer,
+                                tile.minX, tile.maxX, tile.minY, tile.maxY,
+                                triToDraw
+                        );
+                    }
+                }
+            }));
+        }
+
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     public void rasterizePassMultiThreaded(int[] pixels) {
         int winWidth = graphicEngineContext.getWindowWidth();
         int winHeight = graphicEngineContext.getWindowHeight();
 
-        this.updateNumThreads(1);
+        int triangleCount = geometryProcessedTri.size();
+
+        if (triangleCount < 300) {
+            this.numThreads = 1;
+        } else if (triangleCount < 1500) {
+            this.numThreads = Math.min(4, Runtime.getRuntime().availableProcessors());
+        } else {
+            this.updateNumThreads(1);
+        }
 
         int bandHeight = (int) Math.ceil((double) winHeight / numThreads);
 
@@ -247,53 +381,42 @@ public class Pipeline {
             threadBins[i] = new ArrayList<>();
         }
 
-        // 2. Le BINNING : On répartit les triangles post-clipping
-        for (Triangle triToClip : processedTriangle) {
-            this.clipToScreen(winWidth, winHeight, triToClip);
+        for (Triangle triToClip : geometryProcessedTri) {
+            this.clipToScreen(triToClip);
 
             for (Triangle clippedTri : trisToRender) {
-                // Trouver le Y minimum et maximum du triangle
                 Vertex3D[] vertices = clippedTri.getVertices();
                 double minY = Math.min(vertices[0].y, Math.min(vertices[1].y, vertices[2].y));
                 double maxY = Math.max(vertices[0].y, Math.max(vertices[1].y, vertices[2].y));
 
-                // Calculer dans quels seaux ce triangle tombe
                 int startBin = Math.max(0, (int) (minY / bandHeight));
                 int endBin = Math.min(numThreads - 1, (int) (maxY / bandHeight));
 
-                // Ajouter le triangle UNIQUEMENT dans les seaux concernés
                 for (int i = startBin; i <= endBin; i++) {
                     threadBins[i].add(clippedTri);
                 }
             }
         }
-
-        // 3. Lancer l'assaut Multi-Threadé
-//        executeThreadedRasterizationVerbose(threadBins, pixels, winWidth, bandHeight, numThreads, depthBuffer);
-        executeThreadedRasterization(threadBins, pixels, winWidth, bandHeight, numThreads, depthBuffer);
+        graphicEngineContext.incrementTriangleCount(trisToRender.size());
+        executeThreadedRasterizationVerbose(threadBins, pixels, winWidth, bandHeight, numThreads, depthBuffer);
     }
 
     private void executeThreadedRasterization(List<Triangle>[] threadBins, int[] pixels, int winWidth, int bandHeight, int numThreads, float[] depthBuffer) {
         List<Future<?>> futures = new ArrayList<>();
 
-        for (int i = 0; i < numThreads; i++) {
-            final int threadIndex = i;
-            final List<Triangle> localTrisToRender = threadBins[i];
+        for (int threadIndex = 0; threadIndex < numThreads; threadIndex++) {
+            final List<Triangle> localTrisToRender = threadBins[threadIndex];
 
-            // Définition des frontières de ce Thread
             final int threadMinY = threadIndex * bandHeight;
             final int threadMaxY = (threadIndex == numThreads - 1) ? graphicEngineContext.getWindowHeight() - 1 : (threadIndex + 1) * bandHeight - 1;
 
             futures.add(executor.submit(() -> {
-                // Si la liste est vide (aucun triangle dans cette bande), le Thread ne fait RIEN ! (0% CPU)
                 for (Triangle triToDraw : localTrisToRender) {
-                    // On passe les limites Y à la méthode de dessin
-                    triToDraw.drawTexturedTriangleMultiThreaded2(pixels, winWidth, depthBuffer, threadMinY, threadMaxY);
+                    drawTexturedTriangleMultiThreaded(pixels, winWidth, depthBuffer, threadMinY, threadMaxY, triToDraw);
                 }
             }));
         }
 
-        // Attendre que tous les ouvriers aient fini la frame
         for (Future<?> future : futures) {
             try {
                 future.get();
@@ -306,7 +429,6 @@ public class Pipeline {
     private void executeThreadedRasterizationVerbose(List<Triangle>[] threadBins, int[] pixels, int winWidth, int bandHeight, int numThreads, float[] depthBuffer) {
         List<Future<?>> futures = new ArrayList<>();
 
-        // 1. DÉPART DU CHRONO GLOBAL
         long passStartTime = System.nanoTime();
 
         for (int i = 0; i < numThreads; i++) {
@@ -320,17 +442,15 @@ public class Pipeline {
                 long workerStartTime = System.nanoTime();
 
                 for (Triangle triToDraw : localTrisToRender) {
-                    triToDraw.drawTexturedTriangleMultiThreaded2(pixels, winWidth, depthBuffer, threadMinY, threadMaxY);
+                    drawTexturedTriangleMultiThreaded(pixels, winWidth, depthBuffer, threadMinY, threadMaxY, triToDraw);
                 }
 
                 long workerEndTime = System.nanoTime();
 
-                // On enregistre le temps actif en nanosecondes dans notre tableau global
                 threadActiveTimes[threadIndex] = workerEndTime - workerStartTime;
             }));
         }
 
-        // Attendre que tous les ouvriers aient fini la frame
         for (Future<?> future : futures) {
             try {
                 future.get();
@@ -339,13 +459,13 @@ public class Pipeline {
             }
         }
 
-        // 4. FIN DU CHRONO GLOBAL
         long passEndTime = System.nanoTime();
         long passTotalTime = passEndTime - passStartTime;
 
-        // 5. AFFICHAGE DU PROFILING (À faire tourner une fois de temps en temps)
-        // Tu peux l'entourer d'un "if (frameCount % 60 == 0)" pour ne l'afficher qu'une fois par seconde
-        printThreadOccupancy(numThreads, passTotalTime);
+
+        if (graphicEngineContext.getElapsedFrame() % 60 == 0) {
+            printThreadOccupancy(numThreads, passTotalTime);
+        }
     }
 
     // Méthode utilitaire pour afficher le bilan proprement dans la console
@@ -383,14 +503,14 @@ public class Pipeline {
 //        Graphics2D g2 = (Graphics2D) g;
 //        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 
-        for (Triangle triToClip : processedTriangle) {
-            this.clipToScreen(winWidth, winHeight, triToClip);
+        for (Triangle triToClip : geometryProcessedTri) {
+            this.clipToScreen(triToClip);
 
             this.drawBatch(graphicEngineContext, pixels, winWidth, depthBuffer);
         }
     }
 
-    public void clipToScreen(int iWinWidth, int iWinHeight, Triangle triToClip) {
+    public void clipToScreen(Triangle triToClip) {
         listPing.clear();
         listPing.add(triToClip);
 
@@ -410,7 +530,7 @@ public class Pipeline {
 
     public void drawBatch(GraphicEngineContext graphicEngineContext, int[] pixels, int winWidth, float[] depthBuffer) {
         for (Triangle triToDraw : trisToRender) {
-            triToDraw.drawTriangle(pixels, false, winWidth, depthBuffer);
+            drawTexturedTriangle(pixels, winWidth, depthBuffer, triToDraw);
         }
 
         graphicEngineContext.incrementTriangleCount(trisToRender.size());
@@ -434,11 +554,11 @@ public class Pipeline {
         return viewMatrix;
     }
 
-    public List<Triangle> getProcessedTriangle() {
-        return processedTriangle;
+    public List<Triangle> getGeometryProcessedTri() {
+        return geometryProcessedTri;
     }
 
-    public void setFrameWorkQueue(Triangle[] frameWorkQueue) {
-        this.frameWorkQueue = frameWorkQueue;
+    public void setGeometryProcessingQueue(Triangle[] geometryProcessingQueue) {
+        this.geometryProcessingQueue = geometryProcessingQueue;
     }
 }

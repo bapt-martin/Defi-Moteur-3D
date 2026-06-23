@@ -10,8 +10,6 @@ import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Pipeline;
 import engines.graphicEngine.scene.Scene;
 
-import java.awt.*;
-
 public abstract class GameEngine implements Runnable{
     private Thread gameThread;
 
@@ -29,6 +27,7 @@ public abstract class GameEngine implements Runnable{
     private int currentUPS = 0;
 
     public GameEngine(int width, int height) {
+        long startEngineConstruct = System.nanoTime();
 
         this.graphicEngine = new GraphicEngine(width, height);
         this.graphicEngineContext = graphicEngine.getGraphicEngineContext();
@@ -45,6 +44,10 @@ public abstract class GameEngine implements Runnable{
         this.hud = new HeadUpDisplay(this.graphicEngineContext);
         this.benchmarkManager = new BenchmarkManager(this.graphicEngineContext);
         this.graphicEngineContext.setBenchmarkManager(this.benchmarkManager);
+
+        long endEngineConstruct = System.nanoTime();
+//        System.out.printf("-> [PROFILE] Sous-systèmes du GameEngine alloués en %.2f ms%n",
+//                (endEngineConstruct - startEngineConstruct) / 1_000_000.0);
     }
 
     public abstract void initGame();
@@ -57,12 +60,36 @@ public abstract class GameEngine implements Runnable{
 
     public synchronized void start() {
         if (graphicEngineContext.isRunning()) return;
+
+        long startGlobalInit = System.nanoTime();
+//        System.out.println("\n==================================================");
+//        System.out.println("-> [PROFILE] Début de l'initialisation du moteur...");
+//        System.out.println("==================================================");
+
         graphicEngineContext.setRunning(true);
+
+        long startGraphics = System.nanoTime();
         this.graphicEngine.initGraphics();
+        long endGraphics = System.nanoTime();
+
+//        System.out.printf("   |-- Fenêtre et contexte graphique initialisés en %.2f ms%n",
+//                (endGraphics - startGraphics) / 1_000_000.0);
+
         this.inputManager.centerMouse();
 
+        long startUserInit = System.nanoTime();
         this.initGame();
-        this.pipeline.setFrameWorkQueue(new Triangle[scene.getTotalTrianglesCount()]);
+        long endUserInit = System.nanoTime();
+//        System.out.printf("   |-- initGame() utilisateur (Chargement caches et OBJ) exécuté en %.2f ms%n",
+//                (endUserInit - startUserInit) / 1_000_000.0);
+
+        this.pipeline.setGeometryProcessingQueue(new Triangle[scene.getTotalTrianglesCount()]);
+
+        long endGlobalInit = System.nanoTime();
+//        System.out.println("--------------------------------------------------");
+//        System.out.printf("-> [PROFILE] Initialisation globale réussie en %.2f ms (Moteur prêt à tourner !)%n",
+//                (endGlobalInit - startGlobalInit) / 1_000_000.0);
+//        System.out.println("==================================================\n");
 
         gameThread = new Thread(this, "GameThread");
         gameThread.start();
@@ -128,7 +155,7 @@ public abstract class GameEngine implements Runnable{
                 currentFPS = 0;
             }
 
-            if (elapsedTime >= 2.0) {
+            if (elapsedTime >= 3.0) {
                 this.stop();
             }
         }

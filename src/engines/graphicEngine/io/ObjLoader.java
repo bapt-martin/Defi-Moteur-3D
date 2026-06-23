@@ -70,7 +70,7 @@ public abstract class ObjLoader {
                 meshTriangles.add(Triangle.createShallowTriangle(triVerts, textVerts, triNormals, color));
             }
 
-            System.out.println("data loaded");
+//            System.out.println("data loaded");
 
             return mesh;
 
