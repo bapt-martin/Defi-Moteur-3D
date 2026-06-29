@@ -37,6 +37,8 @@ public class Camera {
     public Camera(GraphicEngineContext graphicEngineContext) {
         this.graphicEngineContext = graphicEngineContext;
 
+        graphicEngineContext.setCamera(this);
+
         this.cameraPosition = new Vertex3D(0, 0, 0);
         this.cameraRotation = new CameraRotation(0, 0, 0);
         this.cameraDirection = new Vector3D(0, 0, 1);

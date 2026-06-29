@@ -30,24 +30,24 @@ public abstract class GameEngine implements Runnable{
         long startEngineConstruct = System.nanoTime();
 
         this.graphicEngine = new GraphicEngine(width, height);
+
         this.graphicEngineContext = graphicEngine.getGraphicEngineContext();
 
-        this.scene = new Scene();
         this.camera = new Camera(graphicEngine.getGraphicEngineContext());
 
-        this.graphicEngine.getGraphicEngineContext().setCamera(this.camera);
-
-        this.inputManager = new InputManager(this.graphicEngine, this.camera);
-        inputManager.attachTo(this.graphicEngine);
+        this.scene = new Scene();
 
         this.pipeline = new Pipeline(this.camera, this.scene, this.graphicEngineContext);
+
+        this.inputManager = new InputManager(this.graphicEngine, this.camera);
+
         this.hud = new HeadUpDisplay(this.graphicEngineContext);
         this.benchmarkManager = new BenchmarkManager(this.graphicEngineContext);
         this.graphicEngineContext.setBenchmarkManager(this.benchmarkManager);
 
         long endEngineConstruct = System.nanoTime();
-//        System.out.printf("-> [PROFILE] Sous-systèmes du GameEngine alloués en %.2f ms%n",
-//                (endEngineConstruct - startEngineConstruct) / 1_000_000.0);
+        System.out.printf("-> [PROFILE] Sous-systèmes du GameEngine alloués en %.2f ms%n",
+                (endEngineConstruct - startEngineConstruct) / 1_000_000.0);
     }
 
     public abstract void initGame();
@@ -62,9 +62,9 @@ public abstract class GameEngine implements Runnable{
         if (graphicEngineContext.isRunning()) return;
 
         long startGlobalInit = System.nanoTime();
-//        System.out.println("\n==================================================");
-//        System.out.println("-> [PROFILE] Début de l'initialisation du moteur...");
-//        System.out.println("==================================================");
+        System.out.println("\n==================================================");
+        System.out.println("-> [PROFILE] Début de l'initialisation du moteur...");
+        System.out.println("==================================================");
 
         graphicEngineContext.setRunning(true);
 
@@ -72,24 +72,24 @@ public abstract class GameEngine implements Runnable{
         this.graphicEngine.initGraphics();
         long endGraphics = System.nanoTime();
 
-//        System.out.printf("   |-- Fenêtre et contexte graphique initialisés en %.2f ms%n",
-//                (endGraphics - startGraphics) / 1_000_000.0);
+        System.out.printf("   |-- Fenêtre et contexte graphique initialisés en %.2f ms%n",
+                (endGraphics - startGraphics) / 1_000_000.0);
 
         this.inputManager.centerMouse();
 
         long startUserInit = System.nanoTime();
         this.initGame();
         long endUserInit = System.nanoTime();
-//        System.out.printf("   |-- initGame() utilisateur (Chargement caches et OBJ) exécuté en %.2f ms%n",
-//                (endUserInit - startUserInit) / 1_000_000.0);
+        System.out.printf("   |-- initGame() utilisateur (Chargement caches et OBJ) exécuté en %.2f ms%n",
+                (endUserInit - startUserInit) / 1_000_000.0);
 
         this.pipeline.setGeometryProcessingQueue(new Triangle[scene.getTotalTrianglesCount()]);
 
         long endGlobalInit = System.nanoTime();
-//        System.out.println("--------------------------------------------------");
-//        System.out.printf("-> [PROFILE] Initialisation globale réussie en %.2f ms (Moteur prêt à tourner !)%n",
-//                (endGlobalInit - startGlobalInit) / 1_000_000.0);
-//        System.out.println("==================================================\n");
+        System.out.println("--------------------------------------------------");
+        System.out.printf("-> [PROFILE] Initialisation globale réussie en %.2f ms (Moteur prêt à tourner !)%n",
+                (endGlobalInit - startGlobalInit) / 1_000_000.0);
+        System.out.println("==================================================\n");
 
         gameThread = new Thread(this, "GameThread");
         gameThread.start();

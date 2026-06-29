@@ -56,6 +56,10 @@ public class Pipeline {
             this.minY = minY;
             this.maxY = maxY;
         }
+
+        public void clear() {
+            this.triToRaster.clear();
+        }
     }
 
     public Pipeline(Camera camera, Scene scene, GraphicEngineContext graphicEngineContext) {
@@ -77,12 +81,10 @@ public class Pipeline {
 
     public void execution(int[] pixels ) {
         this.updateViewMatrix();
-
         this.clearDepthBuffer();
 
         this.processAllGeometryMultiThreaded();
 //        this.processAllGeometry();
-
         this.rasterizePassMultiThreadedTBR(pixels);
 //        this.rasterizePassMultiThreaded(pixels);
 //        this.rasterizePass(pixels);
@@ -259,7 +261,8 @@ public class Pipeline {
         int cols = (int) Math.ceil((double) winWidth  / tilesSize);
         int rows = (int) Math.ceil((double) winHeight / tilesSize);
         int totalTiles = cols * rows;
-        if(totalTiles != this.tilesPool.length) {
+
+        if (this.tilesPool == null || totalTiles != this.tilesPool.length) {
             this.tilesPool = new Tile[totalTiles];
             for (int y = 0; y < rows; y++) {
                 for (int x = 0; x < cols; x++) {
@@ -270,6 +273,10 @@ public class Pipeline {
 
                     this.tilesPool[y * cols + x] = new Tile(minX, maxX, minY, maxY);
                 }
+            }
+        } else {
+            for (Tile tile : this.tilesPool) {
+                tile.clear();
             }
         }
     }
@@ -282,7 +289,6 @@ public class Pipeline {
         this.updateTilesPool(tilesSize);
         int cols = (int) Math.ceil((double) winWidth  / tilesSize);
         int rows = (int) Math.ceil((double) winHeight / tilesSize);
-        int totalTiles = cols * rows;
 
 
         int triangleCount = geometryProcessedTri.size();
@@ -468,16 +474,13 @@ public class Pipeline {
         }
     }
 
-    // Méthode utilitaire pour afficher le bilan proprement dans la console
     private void printThreadOccupancy(int numThreads, long passTotalTime) {
         System.out.println("=== Profiling des " + numThreads + " Threads (Bandes Horizontales) ===");
 
         for (int i = 0; i < numThreads; i++) {
-            // Calcul du pourcentage : (Temps de travail / Temps total de la frame) * 100
             double occupancyPercentage = (threadActiveTimes[i] / (double) passTotalTime) * 100.0;
             double activeTimeMs = threadActiveTimes[i] / 1_000_000.0;
 
-            // Affichage formaté (ex: "Thread 03 :  45.2% d'activité (3.20 ms)")
             System.out.printf("Thread %02d : %5.1f%% d'activité (%5.2f ms)%n", i, occupancyPercentage, activeTimeMs);
         }
         System.out.printf("Temps total de la passe : %.2f ms%n", (passTotalTime / 1_000_000.0));
@@ -498,10 +501,6 @@ public class Pipeline {
 
     public void rasterizePass(int[] pixels) {
         int winWidth = graphicEngineContext.getWindowWidth();
-        int winHeight = graphicEngineContext.getWindowHeight();
-
-//        Graphics2D g2 = (Graphics2D) g;
-//        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 
         for (Triangle triToClip : geometryProcessedTri) {
             this.clipToScreen(triToClip);

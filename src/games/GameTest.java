@@ -46,7 +46,7 @@ public class GameTest extends GameEngine {
         Mesh texturedSphere  = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
 //        new Scene.MeshData("F1","obj model\\F1.obj")
         long end = System.nanoTime();
-//        System.out.println((end - start) / 1_000_000.0 + " ms");
+        System.out.println((end - start) / 1_000_000.0 + " ms");
 
         this.scene.addMesh("teapot", teapot);
         this.scene.addMesh("axis", axis);
@@ -98,18 +98,18 @@ public class GameTest extends GameEngine {
         this.scene.addGameObject("teapot14", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot15", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot16", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot17", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot18", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot19", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot20", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot21", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot22", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot23", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot24", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot25", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot26", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot27", new GameObject(teapot, Color.WHITE));
-//        this.scene.addGameObject("teapot28", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot17", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot18", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot19", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot20", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot21", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot22", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot23", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot24", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot25", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot26", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot27", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot28", new GameObject(teapot, Color.WHITE));
 
 
 

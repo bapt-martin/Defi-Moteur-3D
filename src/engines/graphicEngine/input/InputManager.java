@@ -39,6 +39,8 @@ public class InputManager {
         } catch (AWTException e) {
             e.printStackTrace();
         }
+
+        this.attachTo(graphicEngine);
     }
 
     public void attachTo(Component c) {
