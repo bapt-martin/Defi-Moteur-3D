@@ -37,7 +37,7 @@ public class BenchmarkManager {
     private double minFPS = Double.MAX_VALUE;
     private double maxFPS = 0.0;
 
-    private final int WARMUP_FRAMES = 50;
+    private final int WARMUP_FRAMES = 5;
     private final int MEASURE_FRAMES = 150;
     private final int COOLDOWN_FRAMES = 25;
 
@@ -47,6 +47,10 @@ public class BenchmarkManager {
 
     public BenchmarkManager(GraphicEngineContext graphicEngineContext) {
         this.graphicEngineContext = graphicEngineContext;
+    }
+
+    public void initBenchmarkScene() {
+
     }
 
     public void start() {

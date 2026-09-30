@@ -22,7 +22,7 @@ import static engines.graphicEngine.renderer.Rasterizer.*;
 
 public class Pipeline {
     private final Camera camera;
-    private final Scene scene;
+    private Scene scene;
     private final GraphicEngineContext graphicEngineContext;
 
     private Matrix viewMatrix;
@@ -38,12 +38,25 @@ public class Pipeline {
     private final ExecutorService executor;
     private int numThreads;
 
-    private Triangle[] geometryProcessingQueue;
+    private Triangle[] geometryProcessingQueue; //SEUL?
     private int trianglesToProcessCount = 0;
 
     private long[] threadActiveTimes;
 
     private Tile[] tilesPool;
+
+    public long[] telemetryPipelineValue = new long[2 + 2 + 16 * 2];
+
+    private static final int MAX_THREADS_CAPACITY = 16;
+
+    public final double[] geoThreadOccupancySum = new double[MAX_THREADS_CAPACITY];
+    public final double[] rasterThreadOccupancySum = new double[MAX_THREADS_CAPACITY];
+
+    public final int[] geoThreadFrameCount = new int[MAX_THREADS_CAPACITY];
+    public final int[] rasterThreadFrameCount = new int[MAX_THREADS_CAPACITY];
+
+    public double totalGeometryTimeMs = 0;
+    public double totalRasterizationTimeMs = 0;
 
     public static class Tile {
         public final int minX, maxX;
@@ -79,19 +92,42 @@ public class Pipeline {
         this.updateTilesPool(32);
     }
 
-    public void execution(int[] pixels ) {
+    public void execution(int[] pixels) {
         this.updateViewMatrix();
         this.clearDepthBuffer();
+        this.updateGeometryProcessingQueue();
 
-        this.processAllGeometryMultiThreaded();
-//        this.processAllGeometry();
-        this.rasterizePassMultiThreadedTBR(pixels);
-//        this.rasterizePassMultiThreaded(pixels);
-//        this.rasterizePass(pixels);
+        long startTime = System.nanoTime();
+            this.processAllGeometryMultiThreaded();
+    //        this.processAllGeometry();
+        long endTime = System.nanoTime();
+        telemetryPipelineValue[0] += (endTime - startTime);
+
+
+        startTime = System.nanoTime();
+            this.rasterizePassMultiThreadedTilesBR(pixels);
+    //        this.rasterizePassMultiThreaded(pixels);
+    //        this.rasterizePass(pixels);
+        endTime = System.nanoTime();
+        telemetryPipelineValue[18] += (endTime - startTime);
     }
 
     public void updateViewMatrix() {
         this.viewMatrix = Matrix.createViewMatrix(this.camera.getCameraPosition(), this.camera.getCameraDirection(), this.camera.getCameraUp());
+    }
+
+    public void updateGeometryProcessingQueue() {
+        int requiredCapacity = 0;
+        for (GameObject obj : scene.getRenderQueue()) {
+            if (obj.isRendered()) {
+                requiredCapacity += obj.getPoolTriangle().length;
+            }
+        }
+        if (requiredCapacity == 0) return;
+
+        if (this.geometryProcessingQueue == null || this.geometryProcessingQueue.length < requiredCapacity) {
+            this.geometryProcessingQueue = new Triangle[requiredCapacity + 5000];
+        }
     }
 
     public void processAllGeometryMultiThreaded() {
@@ -112,6 +148,8 @@ public class Pipeline {
             }
         }
 
+
+
         if (this.trianglesToProcessCount == 0) return;
 
         Matrix projectionMatrix = this.camera.getProjectionMatrix();
@@ -121,15 +159,27 @@ public class Pipeline {
 
         List<PointLight> lightQueue = scene.getLightQueue();
 
+        if (trianglesToProcessCount < 300) {
+            this.numThreads = 1;
+        } else if (trianglesToProcessCount < 1500) {
+            this.updateNumThreads(Math.min(8, Runtime.getRuntime().availableProcessors()));
+        } else {
+            this.updateNumThreads(1);
+        }
+
 
         List<Future<List<Triangle>>> futures = new ArrayList<>();
         int chunkSize = this.trianglesToProcessCount / this.numThreads;
 
+
+        long passStartTime = System.nanoTime();
         for (int i = 0; i < this.numThreads; i++) {
             final int startIdx = i * chunkSize;
             final int endIdx = (i == this.numThreads - 1) ? this.trianglesToProcessCount : (i + 1) * chunkSize;
 
+            final int threadIndex = i;
             futures.add(executor.submit(() -> {
+                long workerStartTime = System.nanoTime();
 
                 List<Triangle> localProcessedTriBuffer = new ArrayList<>();
                 List<Triangle> localClippedWorker = new ArrayList<>();
@@ -151,6 +201,9 @@ public class Pipeline {
 
                     this.clipAndProjectMultiThreaded(projectionMatrix, frontClippingPlane, farClippingPlane, pooledTri, localProcessedTriBuffer, localClippedWorker);
                 }
+                long workerEndTime = System.nanoTime();
+                this.telemetryPipelineValue[threadIndex + 2] += (workerEndTime - workerStartTime);
+
                 return localProcessedTriBuffer;
             }));
         }
@@ -162,6 +215,9 @@ public class Pipeline {
                 e.printStackTrace();
             }
         }
+
+        long passEndTime = System.nanoTime();
+        telemetryPipelineValue[1] += (passEndTime - passStartTime);
     }
 
     public void clipAndProjectMultiThreaded(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, Triangle triTransformed, List<Triangle> localResultBuffer, List<Triangle> localClippedWorker) {
@@ -281,7 +337,7 @@ public class Pipeline {
         }
     }
 
-    public void rasterizePassMultiThreadedTBR(int[] pixels) {
+    public void rasterizePassMultiThreadedTilesBR(int[] pixels) {
         int winWidth = graphicEngineContext.getWindowWidth();
         int winHeight = graphicEngineContext.getWindowHeight();
 
@@ -289,17 +345,6 @@ public class Pipeline {
         this.updateTilesPool(tilesSize);
         int cols = (int) Math.ceil((double) winWidth  / tilesSize);
         int rows = (int) Math.ceil((double) winHeight / tilesSize);
-
-
-        int triangleCount = geometryProcessedTri.size();
-        if (triangleCount < 300) {
-            this.numThreads = 1;
-        } else if (triangleCount < 1500) {
-            this.numThreads = Math.min(4, Runtime.getRuntime().availableProcessors());
-        } else {
-            this.updateNumThreads(1);
-        }
-
 
         for (Triangle triToClip : geometryProcessedTri) {
             this.clipToScreen(triToClip);
@@ -322,20 +367,30 @@ public class Pipeline {
                         this.tilesPool[ty * cols + tx].triToRaster.add(clippedTri);
                     }
                 }
-            graphicEngineContext.incrementTriangleCount(trisToRender.size());
             }
+            graphicEngineContext.incrementTriangleCount(trisToRender.size());
         }
 
+        long passStartTime = System.nanoTime();
+
         executeDynamicTiledRasterization(this.tilesPool, pixels, winWidth, depthBuffer);
+
+        long passEndTime = System.nanoTime();
+        telemetryPipelineValue[19] += (passEndTime - passStartTime);
     }
 
     private void executeDynamicTiledRasterization(Tile[] tiles, int[] pixels, int winWidth, float[] depthBuffer) {
         List<Future<?>> futures = new ArrayList<>();
-
         AtomicInteger nextTileIndex = new java.util.concurrent.atomic.AtomicInteger(0);
 
+        long[] currentFrameWorkerTimes = new long[this.numThreads];
+        long passStartTime = System.nanoTime();
+        
         for (int i = 0; i < numThreads; i++) {
+            final int threadIndex = i;
             futures.add(executor.submit(() -> {
+                long workerStartTime = System.nanoTime();
+
                 int tileIdx;
 
                 while ((tileIdx = nextTileIndex.getAndIncrement()) < tiles.length) {
@@ -352,6 +407,8 @@ public class Pipeline {
                         );
                     }
                 }
+                long workerEndTime = System.nanoTime();
+                this.telemetryPipelineValue[threadIndex + 20] += (workerEndTime - workerStartTime);
             }));
         }
 
@@ -363,7 +420,6 @@ public class Pipeline {
             }
         }
     }
-
 
     public void rasterizePassMultiThreaded(int[] pixels) {
         int winWidth = graphicEngineContext.getWindowWidth();
@@ -404,7 +460,7 @@ public class Pipeline {
             }
         }
         graphicEngineContext.incrementTriangleCount(trisToRender.size());
-        executeThreadedRasterizationVerbose(threadBins, pixels, winWidth, bandHeight, numThreads, depthBuffer);
+        executeThreadedRasterization(threadBins, pixels, winWidth, bandHeight, numThreads, depthBuffer);
     }
 
     private void executeThreadedRasterization(List<Triangle>[] threadBins, int[] pixels, int winWidth, int bandHeight, int numThreads, float[] depthBuffer) {
@@ -430,61 +486,6 @@ public class Pipeline {
                 e.printStackTrace();
             }
         }
-    }
-
-    private void executeThreadedRasterizationVerbose(List<Triangle>[] threadBins, int[] pixels, int winWidth, int bandHeight, int numThreads, float[] depthBuffer) {
-        List<Future<?>> futures = new ArrayList<>();
-
-        long passStartTime = System.nanoTime();
-
-        for (int i = 0; i < numThreads; i++) {
-            final int threadIndex = i;
-            final List<Triangle> localTrisToRender = threadBins[i];
-
-            final int threadMinY = threadIndex * bandHeight;
-            final int threadMaxY = (threadIndex == numThreads - 1) ? graphicEngineContext.getWindowHeight() - 1 : (threadIndex + 1) * bandHeight - 1;
-
-            futures.add(executor.submit(() -> {
-                long workerStartTime = System.nanoTime();
-
-                for (Triangle triToDraw : localTrisToRender) {
-                    drawTexturedTriangleMultiThreaded(pixels, winWidth, depthBuffer, threadMinY, threadMaxY, triToDraw);
-                }
-
-                long workerEndTime = System.nanoTime();
-
-                threadActiveTimes[threadIndex] = workerEndTime - workerStartTime;
-            }));
-        }
-
-        for (Future<?> future : futures) {
-            try {
-                future.get();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        long passEndTime = System.nanoTime();
-        long passTotalTime = passEndTime - passStartTime;
-
-
-        if (graphicEngineContext.getElapsedFrame() % 60 == 0) {
-            printThreadOccupancy(numThreads, passTotalTime);
-        }
-    }
-
-    private void printThreadOccupancy(int numThreads, long passTotalTime) {
-        System.out.println("=== Profiling des " + numThreads + " Threads (Bandes Horizontales) ===");
-
-        for (int i = 0; i < numThreads; i++) {
-            double occupancyPercentage = (threadActiveTimes[i] / (double) passTotalTime) * 100.0;
-            double activeTimeMs = threadActiveTimes[i] / 1_000_000.0;
-
-            System.out.printf("Thread %02d : %5.1f%% d'activité (%5.2f ms)%n", i, occupancyPercentage, activeTimeMs);
-        }
-        System.out.printf("Temps total de la passe : %.2f ms%n", (passTotalTime / 1_000_000.0));
-        System.out.println("==================================================\n");
     }
 
     public void shutdown() {
@@ -547,6 +548,7 @@ public class Pipeline {
     public void updateNumThreads(int threadLeft) {
         int cores = Runtime.getRuntime().availableProcessors();
         numThreads = Math.max(1, cores - threadLeft);
+//        numThreads = 1;
     }
 
     public Matrix getViewMatrix() {
@@ -559,5 +561,52 @@ public class Pipeline {
 
     public void setGeometryProcessingQueue(Triangle[] geometryProcessingQueue) {
         this.geometryProcessingQueue = geometryProcessingQueue;
+    }
+
+    public void printOccupancyTelemetry() {
+        System.out.println("====== PIPELINE TELEMETRY (OCCUPATION) ======");
+
+        long totalGeometryPassTime = telemetryPipelineValue[1];
+        System.out.printf("Temps global parallélisé Géométrie : %.3f ms\n", totalGeometryPassTime / 1_000_000.0);
+
+        if (totalGeometryPassTime > 0) {
+            for (int i = 0; i < 16; i++) {
+                long threadTime = telemetryPipelineValue[i + 2];
+                if (threadTime > 0) {
+                    double rate = ((double) threadTime / totalGeometryPassTime) * 100.0;
+                    System.out.printf("  -> Thread Géo %d : Taux d'occupation = %.2f%% (%.3f ms)\n",
+                            i, rate, threadTime / 1_000_000.0);
+                }
+            }
+        }
+
+        long totalRasterizationPassTime = telemetryPipelineValue[19];
+        System.out.printf("Temps global parallélisé Rasterization : %.3f ms\n", totalRasterizationPassTime / 1_000_000.0);
+
+        if (totalRasterizationPassTime > 0) {
+            for (int i = 0; i < 16; i++) {
+                long threadTime = telemetryPipelineValue[i + 20];
+                if (threadTime > 0) {
+                    double rate = ((double) threadTime / totalRasterizationPassTime) * 100.0;
+                    System.out.printf("  -> Thread Raster %d : Taux d'occupation = %.2f%% (%.3f ms)\n",
+                            i, rate, threadTime / 1_000_000.0);
+                }
+            }
+        }
+        System.out.println("=============================================");
+    }
+
+    public void resetTelemetry() {
+        java.util.Arrays.fill(this.geoThreadOccupancySum, 0.0);
+        java.util.Arrays.fill(this.rasterThreadOccupancySum, 0.0);
+        java.util.Arrays.fill(this.geoThreadFrameCount, 0);
+        java.util.Arrays.fill(this.rasterThreadFrameCount, 0);
+
+        this.totalGeometryTimeMs = 0;
+        this.totalRasterizationTimeMs = 0;
+    }
+
+    public void setScene(Scene newScene) {
+        this.scene = newScene;
     }
 }

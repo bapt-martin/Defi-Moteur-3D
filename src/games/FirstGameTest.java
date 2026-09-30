@@ -16,17 +16,17 @@ import java.awt.*;
 import java.nio.file.Paths;
 
 
-public class GameTest extends GameEngine {
+public class FirstGameTest extends GameEngine {
     private double angleTheta = 0;
     private double anglePhi = 0;
 
-    public GameTest(int width, int height) {
+    public FirstGameTest(int width, int height) {
         super(width, height);
     }
 
     @Override
     public void initGame() {
-        this.camera.updateParameters(new Vertex3D(0, 0, 23),
+        this.camera.updateParameters(new Vertex3D(0, 0, 30),
                 new Camera.CameraRotation(0, 0, 0),
                 new Vector3D(0, 0, 1),
                 new Vector3D(0, 1, 0),
@@ -38,15 +38,16 @@ public class GameTest extends GameEngine {
         scene.addLight("cameraSpotLight", this.camera.getCameraSpot());
 
         long start = System.nanoTime();
-        Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
-        Mesh axis            = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\axis.obj"));
-        Mesh centeredCube    = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube.obj"));
-        Mesh outCenteredCube = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube pas centré.obj"));
-        Mesh texturedCube    = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\cubeTexture.obj"));
-        Mesh texturedSphere  = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
-//        new Scene.MeshData("F1","obj model\\F1.obj")
+            Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
+            Mesh axis            = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\axis.obj"));
+            Mesh centeredCube    = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube.obj"));
+            Mesh outCenteredCube = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube pas centré.obj"));
+            Mesh texturedCube    = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\cubeTexture.obj"));
+            Mesh texturedSphere  = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
+    //        new Scene.MeshData("F1","obj model\\F1.obj")
         long end = System.nanoTime();
-        System.out.println((end - start) / 1_000_000.0 + " ms");
+        System.out.printf("             |-- mesh loaded in %.2f ms%n", (end - start) / 1_000_000.0);
+
 
         this.scene.addMesh("teapot", teapot);
         this.scene.addMesh("axis", axis);
@@ -82,6 +83,12 @@ public class GameTest extends GameEngine {
         scene.addGameObject("sun2", new GameObject(texturedSphere, texturedCubeTexture));
         scene.getGameObject("sun2").setPosition(-10, 5, 10);
 
+
+//        this.benchmarkTeapots = new GameObject[30];
+//        for (int i = 0; i < 30; i++) {
+//            this.benchmarkTeapots[i] = scene.getGameObject("teapot" + (i + 2));
+//            this.benchmarkTeapots[i].setRendered(false); // Cachées par défaut
+//        }
         this.scene.addGameObject("teapot1", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot2", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot3", new GameObject(teapot, Color.WHITE));
@@ -110,7 +117,9 @@ public class GameTest extends GameEngine {
         this.scene.addGameObject("teapot26", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot27", new GameObject(teapot, Color.WHITE));
         this.scene.addGameObject("teapot28", new GameObject(teapot, Color.WHITE));
-
+        this.scene.addGameObject("teapot29", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot30", new GameObject(teapot, Color.WHITE));
+        this.scene.addGameObject("teapot31", new GameObject(teapot, Color.WHITE));
 
 
         this.scene.addGameObject("axis1",   new GameObject(axis, Color.BLUE));
@@ -145,55 +154,85 @@ public class GameTest extends GameEngine {
 
     @Override
     public void updateGameLogic() {
-        boolean isFlashlightOn = graphicEngineContext.isCameraSpotOn();
-        camera.getCameraSpot().setOn(isFlashlightOn);
+//        boolean isFlashlightOn = graphicEngineContext.isCameraSpotOn();
+//        camera.getCameraSpot().setOn(isFlashlightOn);
+        if (graphicEngineContext.isBenchmarkRunning()) {
+            camera.getCameraSpot().setOn(true);
 
-        angleTheta += 0.07;
-        anglePhi += 0.01;
+            angleTheta += 0.07;
+            anglePhi += 0.01;
 
-        double r = 11.0;
+            double r = 13.0;
 
-        double hR = r * Math.cos(anglePhi);
-        float x = (float) (hR * Math.cos(angleTheta/2));
-        float y = (float) (r * Math.sin(anglePhi));
-        float z = (float) (hR * Math.sin(angleTheta));
+            double hR = r * Math.cos(anglePhi);
+            float x = (float) (hR * Math.cos(angleTheta / 2));
+            float y = (float) (r * Math.sin(anglePhi));
+            float z = (float) (hR * Math.sin(angleTheta));
 
-        float sX = (float) (1.0 + (0.5 * Math.sin(anglePhi)));
-        float sY = (float) (1.0 + (0.5 * Math.sin(angleTheta)));
-        float sZ = (float) (1.0 + (0.5 * Math.cos(anglePhi)));
+            float sX = (float) (1.0 + (0.5 * Math.sin(anglePhi)));
+            float sY = (float) (1.0 + (0.5 * Math.sin(angleTheta)));
+            float sZ = (float) (1.0 + (0.5 * Math.cos(anglePhi)));
 
-        scene.getGameObject("texturedCube").setScale(sX, sY, sZ);
-        scene.getGameObject("texturedCube").rotate(0.5f,1,1.5f);
-        scene.getGameObject("texturedCube").setPosition(x, y, z);
+            int totalTeapots = 30;
+            for (int i = 2; i <= totalTeapots + 1; i++) {
+                GameObject teapot = scene.getGameObject("teapot" + i);
+                if (teapot == null) continue;
 
-        scene.getGameObject("sun1").setPosition(x, 5, z);
-        scene.getGameObject("sun2").setPosition(-x, 5, z);
+                double step = (2 * Math.PI) / totalTeapots;
+                double individualTheta = angleTheta + (i * step);
+                double individualPhi = anglePhi + (i * step);
 
-        scene.getLight("sunLight1").setOn(true);
-        scene.getLight("sunLight1").setLightColor(Color.GREEN);
-        scene.getLight("sunLight2").setOn(true);
-        scene.getLight("sunLight2").setLightColor(Color.BLUE);
+                hR = r * Math.cos(anglePhi);
+                x = (float) (r * Math.cos(individualTheta));
+                y = (float) (hR * Math.sin(individualPhi));
+                z = (float) (r * Math.sin(individualTheta));
+                teapot.setPosition(x, y, z);
 
-        scene.linkLight("sun1", "sunLight1");
-        scene.linkLight("sun2", "sunLight2");
+                sX = (float) (1.0 + (3 * Math.sin(individualPhi)));
+                sY = (float) (1.0 + (3 * Math.sin(individualTheta)));
+                sZ = (float) (1.0 + (3 * Math.cos(individualPhi)));
+                teapot.setScale(sX, sY, sZ);
 
+                float rx = (float) (individualTheta);
+                float ry = (float) (individualTheta * (i % 2 == 0 ? 1 : -1));
+                float rz = (float) (individualPhi);
+                teapot.rotate(rx, ry, rz);
+            }
+
+            scene.getGameObject("texturedCube").setScale(sX, sY, sZ);
+            scene.getGameObject("texturedCube").rotate(0.5f, 1, 1.5f);
+            scene.getGameObject("texturedCube").setPosition(x, y, z);
+
+            scene.getGameObject("sun1").setPosition(x, 5, z);
+            scene.getGameObject("sun2").setPosition(-x, 5, z);
+
+            scene.getLight("sunLight1").setOn(true);
+            scene.getLight("sunLight1").setLightColor(Color.GREEN);
+            scene.getLight("sunLight2").setOn(true);
+            scene.getLight("sunLight2").setLightColor(Color.BLUE);
+
+            scene.linkLight("sun1", "sunLight1");
+            scene.linkLight("sun2", "sunLight2");
+        } else {
+            camera.getCameraSpot().setOn(true);
+
+            angleTheta += 0.07;
+            anglePhi += 0.01;
+
+            double r = 13.0;
+
+            double hR = r * Math.cos(anglePhi);
+            float x = (float) (hR * Math.cos(angleTheta / 2));
+            float y = (float) (r * Math.sin(anglePhi));
+            float z = (float) (hR * Math.sin(angleTheta));
+
+            GameObject teapot = scene.getGameObject("teapot1");
+            teapot.setPosition(x, y, z);
+        }
     }
 
     public static void main(String[] args) {
-        JFrame window = new JFrame("EnginesTest");
-        window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        int width = 800;
-        int height = 600;
-
-        GameTest game1 = new GameTest(width, height);
-
-        window.add(game1.getGraphicEngine());
-        window.pack();
-
-        window.setLocationRelativeTo(null);
-        window.setVisible(true);
-
+        FirstGameTest game1 = new FirstGameTest(800 ,600);
         game1.start();
     }
 }

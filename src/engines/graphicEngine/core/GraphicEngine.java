@@ -4,6 +4,7 @@ import engines.graphicEngine.overlay.HeadUpDisplay;
 import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Pipeline;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
@@ -12,7 +13,6 @@ public class GraphicEngine extends Canvas {
     private final GraphicEngineContext graphicEngineContext;
     private BufferedImage frameBuffer;
     private int[] pixels;
-
 
     public GraphicEngine(int widthInit, int heightInit) {
         this.graphicEngineContext = new GraphicEngineContext(this, widthInit, heightInit);

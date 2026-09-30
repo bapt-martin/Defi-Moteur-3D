@@ -4,6 +4,7 @@ import engines.graphicEngine.math.geometry.Plane;
 import engines.graphicEngine.math.geometry.Vertex3D;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Camera;
+import engines.graphicEngine.scene.Scene;
 
 import javax.swing.*;
 import java.awt.*;
@@ -38,8 +39,6 @@ public class GraphicEngineContext {
     private final int FPS_TARGET = 60;
 
     private Camera camera;
-
-
 
     public GraphicEngineContext(GraphicEngine graphicEngine, int windowWidth, int windowHeight) {
         this.graphicEngine = graphicEngine;
