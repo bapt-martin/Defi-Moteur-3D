@@ -3,15 +3,13 @@ package engines.gameEngine;
 import engines.graphicEngine.core.BenchmarkManager;
 import engines.graphicEngine.core.GraphicEngine;
 import engines.graphicEngine.core.GraphicEngineContext;
-import engines.graphicEngine.input.InputManager;
-import engines.graphicEngine.math.geometry.Triangle;
+import engines.graphicEngine.io.userInput.InputManager;
 import engines.graphicEngine.overlay.HeadUpDisplay;
 import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Pipeline;
 import engines.graphicEngine.scene.Scene;
 
 import javax.swing.*;
-import java.awt.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -27,7 +25,7 @@ public abstract class GameEngine implements Runnable {
     protected final Camera camera;
     protected final InputManager inputManager;
 
-    private final Pipeline pipeline;
+    protected final Pipeline pipeline;
     private final HeadUpDisplay hud;
     private final BenchmarkManager benchmarkManager;
 
@@ -49,7 +47,7 @@ public abstract class GameEngine implements Runnable {
 
             this.pipeline = new Pipeline(this.camera, this.scene, this.graphicEngineContext);
             this.hud = new HeadUpDisplay(this.graphicEngineContext);
-            this.benchmarkManager = new BenchmarkManager(this.graphicEngineContext);
+            this.benchmarkManager = new BenchmarkManager(this.graphicEngineContext, this.pipeline);
             this.graphicEngineContext.setBenchmarkManager(this.benchmarkManager);
         long endEngineConstruct = System.nanoTime();
         System.out.printf("-> [PROFILE] Sub GameEngine systems allocated in %.2f ms%n",
@@ -88,7 +86,7 @@ public abstract class GameEngine implements Runnable {
 
         long endGlobalInit = System.nanoTime();
         System.out.println("==================================================\n");
-        System.out.printf("-> [PROFILE] Gloabal initialisation sucess in %.2f ms %n",
+        System.out.printf("-> [PROFILE] Global initialisation success in %.2f ms %n",
                 (endGlobalInit - startGlobalInit) / 1_000_000.0);
         System.out.println("==================================================\n");
 
@@ -142,8 +140,10 @@ public abstract class GameEngine implements Runnable {
 
             double elapsedTime = (currentTime - startTime) / 1_000_000_000.0;
             graphicEngineContext.setElapsedTime(elapsedTime);
+
             deltaU += deltaTime * graphicEngineContext.getUPS_TARGET();
             previousTime = currentTime;
+
             boolean needsRender = false;
 
             while (deltaU >= 1) {
@@ -156,7 +156,7 @@ public abstract class GameEngine implements Runnable {
             if (needsRender) {
                 this.graphicEngine.render(this.camera, this.pipeline, this.hud);
 
-                if (elapsedTime >= warmUpPeriod) {
+                if (benchmarkManager.isMeasuring()) {
                     if (totalFramesRendered < maxExpectedFrames) {
                         frameTimesBuffer[totalFramesRendered] = (float) deltaTime;
                     }
@@ -184,6 +184,7 @@ public abstract class GameEngine implements Runnable {
                 telemetryResetDone = true;
             }
         }
+
         java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this.graphicEngine);
         if (parentWindow != null) {
             parentWindow.dispose();
@@ -278,7 +279,7 @@ public abstract class GameEngine implements Runnable {
         System.out.println("==================================================\n");
 
         java.util.Scanner scanner = new java.util.Scanner(System.in);
-        System.out.print("-> [BENCHMARK] Entrez un commentaire pour ce test (ex: TBR 32x32 8 threads) : ");
+        System.out.print("-> [BENCHMARK] Commentary : ");
         String commentary = scanner.nextLine();
 
         float geometryTime = (float) this.pipeline.telemetryPipelineValue[0] / 1_000_000;
@@ -359,7 +360,7 @@ public abstract class GameEngine implements Runnable {
             }
 
             pw.println(row);
-            System.out.println("-> [TELEMETRY] data sucessfully exported in : " + csvFileName);
+            System.out.println("-> [TELEMETRY] data successfully exported in : " + csvFileName);
 
         } catch (IOException e) {
             System.err.println("-> [ERROR] Exportation impossible : " + e.getMessage());

@@ -1,4 +1,4 @@
-package engines.graphicEngine.input;
+package engines.graphicEngine.io.userInput;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;

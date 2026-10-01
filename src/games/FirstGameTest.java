@@ -74,66 +74,12 @@ public class FirstGameTest extends GameEngine {
         scene.addGameObject("sun1", new GameObject(texturedSphere, texturedCubeTexture));
         scene.getGameObject("sun1").setPosition(10, 5, 10);
 
-        PointLight sun2 = new PointLight(
-                new Vector3D(-10, 5, 0),
-                0.05f,
-                new Color(255, 180, 50)
-        );
-        scene.addLight("sunLight2", sun2);
-        scene.addGameObject("sun2", new GameObject(texturedSphere, texturedCubeTexture));
-        scene.getGameObject("sun2").setPosition(-10, 5, 10);
-
-
-//        this.benchmarkTeapots = new GameObject[30];
-//        for (int i = 0; i < 30; i++) {
-//            this.benchmarkTeapots[i] = scene.getGameObject("teapot" + (i + 2));
-//            this.benchmarkTeapots[i].setRendered(false); // Cachées par défaut
-//        }
-        this.scene.addGameObject("teapot1", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot2", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot3", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot4", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot5", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot6", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot7", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot8", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot9", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot10", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot11", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot12", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot13", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot14", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot15", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot16", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot17", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot18", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot19", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot20", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot21", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot22", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot23", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot24", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot25", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot26", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot27", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot28", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot29", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot30", new GameObject(teapot, Color.WHITE));
-        this.scene.addGameObject("teapot31", new GameObject(teapot, Color.WHITE));
 
 
         this.scene.addGameObject("axis1",   new GameObject(axis, Color.BLUE));
 
 
         this.scene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
-        this.scene.addGameObject("wall", new GameObject(texturedCube,photoTexture));
-
-
-        scene.getGameObject("wall").setRotation(0, 180, 0);;
-        scene.getGameObject("wall").setPosition(-25, 0, 0);
-        scene.getGameObject("wall").setScale(10, 10, 10);
-
-
         scene.getGameObject("texturedCube").setRotation(45, 45, 45);;
 
 
@@ -141,78 +87,21 @@ public class FirstGameTest extends GameEngine {
         scene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
 
 
-
+        this.scene.addGameObject("teapot1", new GameObject(teapot, Color.WHITE));
 
         GameObject t1 = scene.getGameObject("teapot1");
         t1.setPosition(35, 0, 8);
 //        t1.setPosition(0, 0, 0);
         t1.setRotation(0, 0, 0);
-        t1.setScale(10, 10, 10);
+        t1.setScale(1, 1, 1);
 
         t1.setRendered(true);
     }
 
     @Override
     public void updateGameLogic() {
-//        boolean isFlashlightOn = graphicEngineContext.isCameraSpotOn();
-//        camera.getCameraSpot().setOn(isFlashlightOn);
         if (graphicEngineContext.isBenchmarkRunning()) {
-            camera.getCameraSpot().setOn(true);
-
-            angleTheta += 0.07;
-            anglePhi += 0.01;
-
-            double r = 13.0;
-
-            double hR = r * Math.cos(anglePhi);
-            float x = (float) (hR * Math.cos(angleTheta / 2));
-            float y = (float) (r * Math.sin(anglePhi));
-            float z = (float) (hR * Math.sin(angleTheta));
-
-            float sX = (float) (1.0 + (0.5 * Math.sin(anglePhi)));
-            float sY = (float) (1.0 + (0.5 * Math.sin(angleTheta)));
-            float sZ = (float) (1.0 + (0.5 * Math.cos(anglePhi)));
-
-            int totalTeapots = 30;
-            for (int i = 2; i <= totalTeapots + 1; i++) {
-                GameObject teapot = scene.getGameObject("teapot" + i);
-                if (teapot == null) continue;
-
-                double step = (2 * Math.PI) / totalTeapots;
-                double individualTheta = angleTheta + (i * step);
-                double individualPhi = anglePhi + (i * step);
-
-                hR = r * Math.cos(anglePhi);
-                x = (float) (r * Math.cos(individualTheta));
-                y = (float) (hR * Math.sin(individualPhi));
-                z = (float) (r * Math.sin(individualTheta));
-                teapot.setPosition(x, y, z);
-
-                sX = (float) (1.0 + (3 * Math.sin(individualPhi)));
-                sY = (float) (1.0 + (3 * Math.sin(individualTheta)));
-                sZ = (float) (1.0 + (3 * Math.cos(individualPhi)));
-                teapot.setScale(sX, sY, sZ);
-
-                float rx = (float) (individualTheta);
-                float ry = (float) (individualTheta * (i % 2 == 0 ? 1 : -1));
-                float rz = (float) (individualPhi);
-                teapot.rotate(rx, ry, rz);
-            }
-
-            scene.getGameObject("texturedCube").setScale(sX, sY, sZ);
-            scene.getGameObject("texturedCube").rotate(0.5f, 1, 1.5f);
-            scene.getGameObject("texturedCube").setPosition(x, y, z);
-
-            scene.getGameObject("sun1").setPosition(x, 5, z);
-            scene.getGameObject("sun2").setPosition(-x, 5, z);
-
-            scene.getLight("sunLight1").setOn(true);
-            scene.getLight("sunLight1").setLightColor(Color.GREEN);
-            scene.getLight("sunLight2").setOn(true);
-            scene.getLight("sunLight2").setLightColor(Color.BLUE);
-
-            scene.linkLight("sun1", "sunLight1");
-            scene.linkLight("sun2", "sunLight2");
+            this.graphicEngineContext.getBenchmarkManager().benchMarkSceneUpdate();
         } else {
             camera.getCameraSpot().setOn(true);
 
@@ -228,6 +117,11 @@ public class FirstGameTest extends GameEngine {
 
             GameObject teapot = scene.getGameObject("teapot1");
             teapot.setPosition(x, y, z);
+
+            scene.getGameObject("sun1").setPosition(x, 5, z);
+            scene.getLight("sunLight1").setOn(true);
+            scene.getLight("sunLight1").setLightColor(Color.RED);
+            scene.linkLight("sun1", "sunLight1");
         }
     }
 

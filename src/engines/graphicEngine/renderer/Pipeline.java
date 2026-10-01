@@ -606,7 +606,11 @@ public class Pipeline {
         this.totalRasterizationTimeMs = 0;
     }
 
-    public void setScene(Scene newScene) {
-        this.scene = newScene;
+    public void setScene(Scene scene) {
+        this.scene = scene;
+    }
+
+    public Scene getScene() {
+        return scene;
     }
 }

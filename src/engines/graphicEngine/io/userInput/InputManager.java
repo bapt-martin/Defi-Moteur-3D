@@ -1,4 +1,4 @@
-package engines.graphicEngine.input;
+package engines.graphicEngine.io.userInput;
 
 import engines.graphicEngine.core.BenchmarkManager;
 import engines.graphicEngine.core.GraphicEngineContext;

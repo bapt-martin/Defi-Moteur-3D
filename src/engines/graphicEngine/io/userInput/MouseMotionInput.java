@@ -1,4 +1,4 @@
-package engines.graphicEngine.input;
+package engines.graphicEngine.io.userInput;
 
 import engines.graphicEngine.core.GraphicEngineContext;
 import engines.graphicEngine.math.geometry.Vertex3D;
