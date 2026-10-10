@@ -1,433 +1,641 @@
-package engines.graphicEngine.core;
-
-import engines.graphicEngine.io.ObjLoader;
-import engines.graphicEngine.math.geometry.Mesh;
-import engines.graphicEngine.math.geometry.Plane;
-import engines.graphicEngine.math.geometry.Vertex3D;
-import engines.graphicEngine.math.tools.Vector3D;
-import engines.graphicEngine.renderer.Camera;
-import engines.graphicEngine.renderer.Pipeline;
-import engines.graphicEngine.renderer.Texture;
-import engines.graphicEngine.scene.GameObject;
-import engines.graphicEngine.scene.Scene;
-import engines.graphicEngine.scene.lightRelative.PointLight;
-
-import java.awt.*;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
-
-public class BenchmarkManager {
-    public enum State {
-        IDLE,
-        WARMUP,
-        MEASURING,
-        COOL_DOWN,
-        FINISHED
-    }
-
-    private double angleTheta = 0;
-    private double anglePhi = 0;
-
-    private State currentState = State.IDLE;
-
-    private final GraphicEngineContext graphicEngineContext;
-    private final Pipeline pipeline;
-
-    private int startFrameOfCurrentState = 0;
-
-    private long startTriangleCount = 0;
-    private long endTriangleCount = 0;
-
-    private long startTime = 0;
-    private long endTime = 0;
-
-    private long previousFrameTime = 0;
-    private long previousTriangleCount = 0;
-
-    private double minTrianglesPerSecond = Double.MAX_VALUE;
-    private double maxTrianglesPerSecond = 0.0;
-
-    private double minFPS = Double.MAX_VALUE;
-    private double maxFPS = 0.0;
-
-    private final int WARMUP_FRAMES = 50;
-    private final int MEASURE_FRAMES = 150;
-    private final int COOLDOWN_FRAMES = 25;
-
-    private double benchmarkDuration = 0;
-    private double benchmarkAverageFPS = 0;
-    private long benchmarkTotalTriangleCount = 0;
-
-    int maxExpectedFrames = 3000;
-    float[] frameTimesBuffer = new float[maxExpectedFrames];
-    int totalFramesRendered = 0;
-
-    boolean telemetryResetDone = false;
-
-    private Scene benchmarkScene;
-    private Scene previousScene;
-
-    public BenchmarkManager(GraphicEngineContext graphicEngineContext, Pipeline pipeline) {
-        this.graphicEngineContext = graphicEngineContext;
-        this.pipeline = pipeline;
-        this.initBenchmarkScene();
-    }
-
-    public void initBenchmarkScene() {
-        this.benchmarkScene = new Scene();
-        this.graphicEngineContext.getCamera().updateParameters(new Vertex3D(0, 0, 30),
-                new Camera.CameraRotation(0, 0, 0),
-                new Vector3D(0, 0, 1),
-                new Vector3D(0, 1, 0),
-                new Plane(new Vertex3D(0, 0, 0.1f), new Vector3D(0, 0, 1)),
-                new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
-                0.1f,50,90,
-                0.005f, Color.WHITE, 15);
-
-        benchmarkScene.addLight("cameraSpotLight", this.graphicEngineContext.getCamera().getCameraSpot());
-
-        Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
-        Mesh axis            = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\axis.obj"));
-        Mesh centeredCube    = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube.obj"));
-        Mesh outCenteredCube = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube pas centré.obj"));
-        Mesh texturedCube    = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\cubeTexture.obj"));
-        Mesh texturedSphere  = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
-
-
-
-        this.benchmarkScene.addMesh("teapot", teapot);
-        this.benchmarkScene.addMesh("axis", axis);
-        this.benchmarkScene.addMesh("centeredCube", centeredCube);
-        this.benchmarkScene.addMesh("outCenteredCube", outCenteredCube);
-        this.benchmarkScene.addMesh("texturedCube", texturedCube);
-        this.benchmarkScene.addMesh("texturedSphere", texturedSphere);
-
-
-        Texture texturedCubeTexture = new Texture("obj model\\texture\\textureTest1.png");
-        Texture photoTexture = new Texture("obj model\\texture\\photo.png");
-        this.benchmarkScene.addTexture("texturedCubeTexture",texturedCubeTexture);
-        this.benchmarkScene.addTexture("photoTexture",photoTexture);
-
-
-        for (int i = 0; i < 30; i++) {
-            this.benchmarkScene.addGameObject("teapot" + i, new GameObject(teapot, Color.WHITE));
+    package engines.graphicEngine.core;
+    
+    import engines.graphicEngine.io.ObjLoader;
+    import engines.graphicEngine.math.geometry.Mesh;
+    import engines.graphicEngine.math.geometry.Plane;
+    import engines.graphicEngine.math.geometry.Vertex3D;
+    import engines.graphicEngine.math.tools.Vector3D;
+    import engines.graphicEngine.renderer.Camera;
+    import engines.graphicEngine.renderer.Pipeline;
+    import engines.graphicEngine.renderer.Texture;
+    import engines.graphicEngine.scene.GameObject;
+    import engines.graphicEngine.scene.Scene;
+    import engines.graphicEngine.scene.lightRelative.PointLight;
+    
+    import java.awt.*;
+    import java.io.*;
+    import java.nio.file.Paths;
+    import java.time.LocalDateTime;
+    import java.time.format.DateTimeFormatter;
+    import java.util.Locale;
+    
+    import static engines.graphicEngine.renderer.Pipeline.MAX_THREADS_CAPACITY;
+    
+    public class BenchmarkManager {
+        public enum State {
+            IDLE,
+            WARMUP,
+            MEASURING,
+            COOL_DOWN,
+            FINISHED
         }
 
-        PointLight sun1 = new PointLight(
-                new Vector3D(10, 5, 0),
-                0.05f,
-                new Color(255, 180, 50)
-        );
-        benchmarkScene.addLight("sunLight1", sun1);
-        benchmarkScene.addGameObject("sun1", new GameObject(texturedSphere, texturedCubeTexture));
-        benchmarkScene.getGameObject("sun1").setPosition(10, 5, 10);
 
-        PointLight sun2 = new PointLight(
-                new Vector3D(-10, 5, 0),
-                0.05f,
-                new Color(255, 180, 50)
-        );
-        benchmarkScene.addLight("sunLight2", sun2);
-        benchmarkScene.addGameObject("sun2", new GameObject(texturedSphere, texturedCubeTexture));
-        benchmarkScene.getGameObject("sun2").setPosition(-10, 5, 10);
+        private double angleTheta = 0;
+        private double anglePhi = 0;
 
-        benchmarkScene.addGameObject("axis1",   new GameObject(axis, Color.BLUE));
+        private State currentState = State.IDLE;
 
+        private final GraphicEngineContext graphicEngineContext;
+        private final Pipeline pipeline;
+        private BenchmarkMetrics metrics;
+        private Scene benchmarkScene;
+        private Scene previousScene;
 
-        benchmarkScene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
-        benchmarkScene.addGameObject("wall", new GameObject(texturedCube,photoTexture));
+        private int startFrameOfCurrentState = 0;
 
+        private final int WARMUP_FRAMES = 5;
+        private final int MEASURE_FRAMES = 15;
+        private final int COOLDOWN_FRAMES = 5;
 
-        benchmarkScene.getGameObject("wall").setRotation(0, 180, 0);;
-        benchmarkScene.getGameObject("wall").setPosition(-25, 0, 0);
-        benchmarkScene.getGameObject("wall").setScale(10, 10, 10);
+        float[] frameTimesBuffer = new float[MEASURE_FRAMES];
 
+        boolean telemetryResetDone = false;
 
-        benchmarkScene.getGameObject("texturedCube").setRotation(45, 45, 45);;
+        public long[] telemetryPipelineValue = new long[2 + 2 + 16 * 2];
 
+        public final double[] geoThreadOccupancySum = new double[MAX_THREADS_CAPACITY];
+        public final double[] rasterThreadOccupancySum = new double[MAX_THREADS_CAPACITY];
 
-        benchmarkScene.getGameObject("axis1").setPosition(0, 0, 0);
-        benchmarkScene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
+        public final int[] geoThreadFrameCount = new int[MAX_THREADS_CAPACITY];
+        public final int[] rasterThreadFrameCount = new int[MAX_THREADS_CAPACITY];
 
-        GameObject t1 = benchmarkScene.getGameObject("teapot1");
-        t1.setPosition(35, 0, 8);
-//        t1.setPosition(0, 0, 0);
-        t1.setRotation(0, 0, 0);
-        t1.setScale(10, 10, 10);
+        public double totalGeometryTimeMs = 0;
+        public double totalRasterizationTimeMs = 0;
 
-        t1.setRendered(true);
-    }
+        public static class BenchmarkMetrics {
+            // --- Meta / Context ---
+            public String commentary;
+            public int windowWidth;
+            public int windowHeight;
 
-    public void benchMarkSceneUpdate() {
-        this.graphicEngineContext.getCamera().getCameraSpot().setOn(true);
+            // --- Performance : Frame Time ---
+            public int totalRenderedFrames = 0;
+            public float averageFrameTime;
+            public float minFrameTime;
+            public float maxFrameTime;
+            public float averageBestFrameTime;
+            public float averageWorstFrameTime;
+            public long benchmarkTimeStart = 0;
+            public long benchmarkTimeEnd = 0;
+            public long previousFrameTime = 0;
 
-        angleTheta += 0.07;
-        anglePhi += 0.01;
+            // --- Performance : FPS ---
+            public double benchmarkAverageFPS = 0;
+            public double benchmarkDuration = 0;
+            public float onePercentLowFPS;
+            public float onePercentHighFPS;
 
-        double r = 13.0;
+            // --- Pipeline : Overhead ---
+            public float pipelineOverheadDuration;
 
-        double hR = r * Math.cos(anglePhi);
-        float x = (float) (hR * Math.cos(angleTheta / 2));
-        float y = (float) (r * Math.sin(anglePhi));
-        float z = (float) (hR * Math.sin(angleTheta));
+            // --- Pipeline : Geometry ---
+            public double minTrianglesPerSecond = Double.MAX_VALUE;
+            public double maxTrianglesPerSecond = 0.0;
+            public long benchmarkTotalRenderedTriangleCount = 0;
+            public float geometryPassDuration;
+            public float geometryPassDurationRatio;
+            public double averageTrianglesPerFrame;
+            public long culledTrianglesPerFrame;
+            public float cullingEfficiencyPercentage;
+            public double[] geometryThreadOccupation = new double[16];
 
-        float sX = (float) (1.0 + (0.5 * Math.sin(anglePhi)));
-        float sY = (float) (1.0 + (0.5 * Math.sin(angleTheta)));
-        float sZ = (float) (1.0 + (0.5 * Math.cos(anglePhi)));
+            // --- Pipeline : Rasterization ---
+            public float rasterizationPassDuration;
+            public float rasterizationPassDurationRatio;
+            public long rasterizedTrianglesPerFrame;
+            public long pixelsProcessedPerFrame;
+            public float fillRateMegapixels;
+            public float overdrawRatio;
+            public long zBufferRejectionsPerFrame;
+            public float zBufferRejectionPercentage;
+            public double[] rasterizationThreadOccupation = new double[16];
 
-        int totalTeapots = 30;
-        for (int i = 2; i <= totalTeapots + 1; i++) {
-            GameObject teapot = benchmarkScene.getGameObject("teapot" + i);
-            if (teapot == null) continue;
-
-            double step = (2 * Math.PI) / totalTeapots;
-            double individualTheta = angleTheta + (i * step);
-            double individualPhi = anglePhi + (i * step);
-
-            hR = r * Math.cos(anglePhi);
-            x = (float) (r * Math.cos(individualTheta));
-            y = (float) (hR * Math.sin(individualPhi));
-            z = (float) (r * Math.sin(individualTheta));
-            teapot.setPosition(x, y, z);
-
-            sX = (float) (1.0 + (3 * Math.sin(individualPhi)));
-            sY = (float) (1.0 + (3 * Math.sin(individualTheta)));
-            sZ = (float) (1.0 + (3 * Math.cos(individualPhi)));
-            teapot.setScale(sX, sY, sZ);
-
-            float rx = (float) (individualTheta);
-            float ry = (float) (individualTheta * (i % 2 == 0 ? 1 : -1));
-            float rz = (float) (individualPhi);
-            teapot.rotate(rx, ry, rz);
+            public float averageUsedMemoryMB;
         }
 
-        benchmarkScene.getGameObject("texturedCube").setScale(sX, sY, sZ);
-        benchmarkScene.getGameObject("texturedCube").rotate(0.5f, 1, 1.5f);
-        benchmarkScene.getGameObject("texturedCube").setPosition(x, y, z);
+        public BenchmarkManager(GraphicEngineContext graphicEngineContext, Pipeline pipeline) {
+            this.graphicEngineContext = graphicEngineContext;
+            this.pipeline = pipeline;
+            this.metrics = new BenchmarkMetrics();
+            this.initBenchmarkScene();
+        }
+    
+        public void initBenchmarkScene() {
+            this.benchmarkScene = new Scene();
+            this.graphicEngineContext.getCamera().updateParameters(new Vertex3D(0, 0, 30),
+                    new Camera.CameraRotation(0, 0, 0),
+                    new Vector3D(0, 0, 1),
+                    new Vector3D(0, 1, 0),
+                    new Plane(new Vertex3D(0, 0, 0.1f), new Vector3D(0, 0, 1)),
+                    new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
+                    0.1f,50,90,
+                    0.005f, Color.WHITE, 15);
+    
+            benchmarkScene.addLight("cameraSpotLight", this.graphicEngineContext.getCamera().getCameraSpot());
+    
+            //Mesh loading
+            Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
+            Mesh axis            = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\axis.obj"));
+            Mesh centeredCube    = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube.obj"));
+            Mesh outCenteredCube = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube pas centré.obj"));
+            Mesh texturedCube    = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\cubeTexture.obj"));
+            Mesh texturedSphere  = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
+    
+            this.benchmarkScene.addMesh("teapot", teapot);
+            this.benchmarkScene.addMesh("axis", axis);
+            this.benchmarkScene.addMesh("centeredCube", centeredCube);
+            this.benchmarkScene.addMesh("outCenteredCube", outCenteredCube);
+            this.benchmarkScene.addMesh("texturedCube", texturedCube);
+            this.benchmarkScene.addMesh("texturedSphere", texturedSphere);
+    
+    
+            Texture texturedCubeTexture = new Texture("obj model\\texture\\textureTest1.png");
+            Texture photoTexture = new Texture("obj model\\texture\\photo.png");
+            this.benchmarkScene.addTexture("texturedCubeTexture",texturedCubeTexture);
+            this.benchmarkScene.addTexture("photoTexture",photoTexture);
+    
+    
+            for (int i = 0; i < 30; i++) {
+                this.benchmarkScene.addGameObject("teapot" + i, new GameObject(teapot, Color.WHITE));
+            }
+    
+            PointLight sun1 = new PointLight(
+                    new Vector3D(10, 5, 0),
+                    0.05f,
+                    new Color(255, 180, 50)
+            );
+            benchmarkScene.addLight("sunLight1", sun1);
+            benchmarkScene.addGameObject("sun1", new GameObject(texturedSphere, texturedCubeTexture));
+            benchmarkScene.getGameObject("sun1").setPosition(10, 5, 10);
+    
+            PointLight sun2 = new PointLight(
+                    new Vector3D(-10, 5, 0),
+                    0.05f,
+                    new Color(255, 180, 50)
+            );
+            benchmarkScene.addLight("sunLight2", sun2);
+            benchmarkScene.addGameObject("sun2", new GameObject(texturedSphere, texturedCubeTexture));
+            benchmarkScene.getGameObject("sun2").setPosition(-10, 5, 10);
+    
+            benchmarkScene.addGameObject("axis1",   new GameObject(axis, Color.BLUE));
+    
+    
+            benchmarkScene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
+            benchmarkScene.addGameObject("wall", new GameObject(texturedCube,photoTexture));
+    
+    
+            benchmarkScene.getGameObject("wall").setRotation(0, 180, 0);;
+            benchmarkScene.getGameObject("wall").setPosition(-25, 0, 0);
+            benchmarkScene.getGameObject("wall").setScale(10, 10, 10);
+    
+    
+            benchmarkScene.getGameObject("texturedCube").setRotation(45, 45, 45);;
+    
+    
+            benchmarkScene.getGameObject("axis1").setPosition(0, 0, 0);
+            benchmarkScene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
+    
+            GameObject t1 = benchmarkScene.getGameObject("teapot1");
+            t1.setPosition(35, 0, 8);
+            t1.setRotation(0, 0, 0);
+            t1.setScale(10, 10, 10);
+        }
+    
+        public void updateBenchmarkScene() {
+            this.graphicEngineContext.getCamera().getCameraSpot().setOn(true);
+    
+            angleTheta += 0.07;
+            anglePhi += 0.01;
+    
+            double r = 13.0;
+    
+            double hR = r * Math.cos(anglePhi);
+            float x = (float) (hR * Math.cos(angleTheta / 2));
+            float y = (float) (r * Math.sin(anglePhi));
+            float z = (float) (hR * Math.sin(angleTheta));
+    
+            float sX = (float) (1.0 + (0.5 * Math.sin(anglePhi)));
+            float sY = (float) (1.0 + (0.5 * Math.sin(angleTheta)));
+            float sZ = (float) (1.0 + (0.5 * Math.cos(anglePhi)));
+    
+            int totalTeapots = 30;
+            for (int i = 2; i <= totalTeapots + 1; i++) {
+                GameObject teapot = benchmarkScene.getGameObject("teapot" + i);
+                if (teapot == null) continue;
+    
+                double step = (2 * Math.PI) / totalTeapots;
+                double individualTheta = angleTheta + (i * step);
+                double individualPhi = anglePhi + (i * step);
+    
+                hR = r * Math.cos(anglePhi);
+                x = (float) (r * Math.cos(individualTheta));
+                y = (float) (hR * Math.sin(individualPhi));
+                z = (float) (r * Math.sin(individualTheta));
+                teapot.setPosition(x, y, z);
+    
+                sX = (float) (1.0 + (3 * Math.sin(individualPhi)));
+                sY = (float) (1.0 + (3 * Math.sin(individualTheta)));
+                sZ = (float) (1.0 + (3 * Math.cos(individualPhi)));
+                teapot.setScale(sX, sY, sZ);
+    
+                float rx = (float) (individualTheta);
+                float ry = (float) (individualTheta * (i % 2 == 0 ? 1 : -1));
+                float rz = (float) (individualPhi);
+                teapot.rotate(rx, ry, rz);
+            }
+    
+            benchmarkScene.getGameObject("texturedCube").setScale(sX, sY, sZ);
+            benchmarkScene.getGameObject("texturedCube").rotate(0.5f, 1, 1.5f);
+            benchmarkScene.getGameObject("texturedCube").setPosition(x, y, z);
+    
+            benchmarkScene.getGameObject("sun1").setPosition(x, 5, z);
+            benchmarkScene.getGameObject("sun2").setPosition(-x, 5, z);
+    
+            benchmarkScene.getLight("sunLight1").setOn(true);
+            benchmarkScene.getLight("sunLight1").setLightColor(Color.GREEN);
+            benchmarkScene.getLight("sunLight2").setOn(true);
+            benchmarkScene.getLight("sunLight2").setLightColor(Color.BLUE);
+    
+            benchmarkScene.linkLight("sun1", "sunLight1");
+            benchmarkScene.linkLight("sun2", "sunLight2");
+        }
+    
+        public void start() {
+            if (currentState == State.WARMUP || currentState == State.MEASURING) return;
+            this.currentState = State.WARMUP;
 
-        benchmarkScene.getGameObject("sun1").setPosition(x, 5, z);
-        benchmarkScene.getGameObject("sun2").setPosition(-x, 5, z);
+//            this.graphicEngineContext.setWindowHeight(1500);
+//            this.graphicEngineContext.setWindowWidth(600);
 
-        benchmarkScene.getLight("sunLight1").setOn(true);
-        benchmarkScene.getLight("sunLight1").setLightColor(Color.GREEN);
-        benchmarkScene.getLight("sunLight2").setOn(true);
-        benchmarkScene.getLight("sunLight2").setLightColor(Color.BLUE);
+            System.out.println("--- BENCHMARK STARTED ---");
+            System.out.println("--- WARM UP ---");
+    
+            this.previousScene = this.pipeline.getScene();
+            this.pipeline.setScene(benchmarkScene);
+    
+            this.startFrameOfCurrentState = graphicEngineContext.getElapsedFrame();
+    
+            metrics.benchmarkAverageFPS = 0;
+            metrics.benchmarkDuration = 0;
+    
+            metrics.minTrianglesPerSecond = Double.MAX_VALUE;
+            metrics.maxTrianglesPerSecond = 0.0;
+        }
+    
+        public void cancel() {
+            System.out.println("--- BENCHMARK CANCELLED ---");
+            this.currentState = State.IDLE;
+            graphicEngineContext.setBenchmarkRunning(this.isRunning());
+        }
+    
+        public void update() {
+            if (currentState == State.IDLE || currentState == State.FINISHED) return;
+    
+            int currentFrame = graphicEngineContext.getElapsedFrame();
+            int frameNumber = currentFrame - startFrameOfCurrentState - 1;
+    
+            long currentTime = System.nanoTime();
 
-        benchmarkScene.linkLight("sun1", "sunLight1");
-        benchmarkScene.linkLight("sun2", "sunLight2");
-    }
+            switch (currentState) {
+                case WARMUP:
+                    if (frameNumber >= WARMUP_FRAMES) {
+                        System.out.println("--- WARMUP DONE ---");
+                        System.out.println("--- START OF MEASURE ---");
+    
+                        this.currentState = State.MEASURING;
+                        graphicEngineContext.setBenchmarkRunning(this.isRunning());
 
-    public void start() {
-        if (currentState == State.WARMUP || currentState == State.MEASURING) return;
-        this.previousScene = this.pipeline.getScene();
-        this.pipeline.setScene(benchmarkScene);
+                        metrics.previousFrameTime = currentTime;
 
-        System.out.println("--- BENCHMARK STARTED ---");
-        System.out.println("--- WARM UP ---");
-        this.currentState = State.WARMUP;
+                        this.startFrameOfCurrentState = currentFrame;
 
-        this.startFrameOfCurrentState = graphicEngineContext.getElapsedFrame();
+                        if (!telemetryResetDone) {
+                            this.resetTelemetry();
+                            telemetryResetDone = true;
+                        }
 
-        this.benchmarkAverageFPS = 0;
-        this.benchmarkDuration = 0;
-
-        this.minTrianglesPerSecond = Double.MAX_VALUE;
-        this.maxTrianglesPerSecond = 0.0;
-
-        this.minFPS = Double.MAX_VALUE;
-        this.maxFPS = 0.0;
-
-    }
-
-    public void cancel() {
-        System.out.println("--- BENCHMARK CANCELLED ---");
-        this.currentState = State.IDLE;
-        graphicEngineContext.setBenchmarkRunning(this.isRunning());
-    }
-
-    public void update() {
-        if (currentState == State.IDLE || currentState == State.FINISHED) return;
-
-        int currentFrame = graphicEngineContext.getElapsedFrame();
-        int framesInState = currentFrame - startFrameOfCurrentState;
-
-        long currentTime = System.nanoTime();
-        long currentTotalTriangles = graphicEngineContext.getTotalTriangleCount();
-
-        switch (currentState) {
-            case WARMUP:
-                if (framesInState >= WARMUP_FRAMES) {
-                    System.out.println("--- WARMUP DONE ---");
-                    System.out.println("--- START OF MEASURE ---");
-
-                    this.currentState = State.MEASURING;
-                    graphicEngineContext.setBenchmarkRunning(this.isRunning());
-
-                    this.startTime = currentTime;
-                    this.startTriangleCount = currentTotalTriangles;
-
-                    this.previousFrameTime = currentTime;
-                    this.previousTriangleCount = currentTotalTriangles;
-
-                    this.startFrameOfCurrentState = currentFrame;
-                }
-                break;
-
-            case MEASURING:
-                long timeDeltaNanoseconds = currentTime - previousFrameTime;
-                long trianglesThisFrame = currentTotalTriangles - previousTriangleCount;
-
-                if (timeDeltaNanoseconds > 0) {
-                    double timeDeltaSeconds = timeDeltaNanoseconds / 1_000_000_000.0;
-                    double currentTrianglesPerSecond = trianglesThisFrame / timeDeltaSeconds;
-                    double currentFPS = 1.0 / timeDeltaSeconds;
-
-                    if (currentTrianglesPerSecond < minTrianglesPerSecond) {
-                        minTrianglesPerSecond = currentTrianglesPerSecond;
+                        metrics.benchmarkTimeStart = System.nanoTime();
                     }
-                    if (currentTrianglesPerSecond > maxTrianglesPerSecond) {
-                        maxTrianglesPerSecond = currentTrianglesPerSecond;
+                    break;
+    
+                case MEASURING:
+                    System.out.println(frameNumber);
+                    if (frameNumber >= MEASURE_FRAMES) {
+                        System.out.println("--- MEASURE DONE ---");
+                        System.out.println("--- START OF COOL DOWN ---");
+                        this.currentState = State.COOL_DOWN;
+
+                        metrics.benchmarkTimeEnd = currentTime;
+
+                        graphicEngineContext.setBenchmarkRunning(this.isRunning());
+
+                        this.startFrameOfCurrentState = currentFrame;
+                        break;
                     }
-                    if (currentFPS < minFPS) {
-                        minFPS = currentFPS;
+
+                    long trianglesThisFrame = graphicEngineContext.getCurrentFrameRenderedTriangleCount();
+                    metrics.benchmarkTotalRenderedTriangleCount += trianglesThisFrame;
+
+                    System.out.println(metrics.benchmarkTotalRenderedTriangleCount);
+                    System.out.println(trianglesThisFrame);
+
+                    frameTimesBuffer[frameNumber] = (float) graphicEngineContext.getDeltaFrameTime();
+                    metrics.totalRenderedFrames++;
+
+                    if (currentTime - metrics.previousFrameTime > 0) {
+                        double deltaFrameTime = graphicEngineContext.getDeltaFrameTime();
+    
+                        double currentTrianglesPerSecond = trianglesThisFrame / deltaFrameTime;
+
+                        if (currentTrianglesPerSecond < metrics.minTrianglesPerSecond) {
+                            metrics.minTrianglesPerSecond = currentTrianglesPerSecond;
+                        }
+                        if (currentTrianglesPerSecond > metrics.maxTrianglesPerSecond) {
+                            metrics.maxTrianglesPerSecond = currentTrianglesPerSecond;
+                        }
                     }
-                    if (currentFPS > maxFPS) {
-                        maxFPS = currentFPS;
+
+                    metrics.previousFrameTime = currentTime;
+
+                    break;
+    
+                case COOL_DOWN:
+                    if (frameNumber >= COOLDOWN_FRAMES) {
+                        System.out.println("--- COOL DOWN DONE ---");
+                        finish();
                     }
-                }
+                    break;
+    
+                case IDLE:
+                    System.out.println("--- BENCHMARK IDLE ---");
+                    break;
 
-                this.previousFrameTime = currentTime;
-                this.previousTriangleCount = currentTotalTriangles;
-
-                if (framesInState >= MEASURE_FRAMES) {
-                    System.out.println("--- MEASURE DONE ---");
-                    System.out.println("--- START OF COOL DOWN ---");
-
-                    this.endTime = currentTime;
-                    this.endTriangleCount = currentTotalTriangles;
-
-                    this.currentState = State.COOL_DOWN;
-                    graphicEngineContext.setBenchmarkRunning(this.isRunning());
-
-                    this.startFrameOfCurrentState = currentFrame;
-                }
-                break;
-
-            case COOL_DOWN:
-                if (framesInState >= COOLDOWN_FRAMES) {
-                    System.out.println("--- COOL DOWN DONE ---");
-                    finish();
-                }
-                break;
-
-            case IDLE:
-                System.out.println("--- BENCHMARK IDLE ---");
-                this.benchmarkDuration = 0;
-                this.benchmarkAverageFPS = 0;
-                break;
-            default:
-                break;
+                default:
+                    break;
+            }
         }
-    }
+    
+        public void finish() {
+            System.out.println("--- END OF BENCHMARK ---");
+            this.pipeline.setScene(previousScene);
+            telemetryResetDone = false;
+    
+            java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this.graphicEngineContext.getGraphicEngine());
+            if (parentWindow != null) {
+                parentWindow.dispose();
+            }
+            graphicEngineContext.setRunning(false);
 
-    public void finish() {
-        System.out.println("--- END OF BENCHMARK ---");
-        this.pipeline.setScene(previousScene);
+            computeBenchmarkResults();
+            printBenchmarkResult();
+            saveBenchmarkResultToCSV();
 
-        this.benchmarkDuration = (endTime - startTime) / 1_000_000_000.0;
-        this.benchmarkAverageFPS = MEASURE_FRAMES / benchmarkDuration;
-        this.benchmarkTotalTriangleCount = endTriangleCount - startTriangleCount;
+            this.currentState = State.FINISHED;
 
-        if (minTrianglesPerSecond == Double.MAX_VALUE) {
-            minTrianglesPerSecond = 0;
-        }
-        if (minFPS == Double.MAX_VALUE) {
-            minFPS = 0;
+            graphicEngineContext.setBenchmarkRunning(this.isRunning());
         }
 
-        saveResultsToCSV();
-
-        this.currentState = State.FINISHED;
-        graphicEngineContext.setBenchmarkRunning(this.isRunning());
-
-        System.out.println("=== BENCHMARK RESULT ===");
-        System.out.println("Avg FPS        : " + String.format(Locale.US, "%.2f", benchmarkAverageFPS));
-        System.out.println("Min FPS        : " + String.format(Locale.US, "%.2f", minFPS));
-        System.out.println("Max FPS        : " + String.format(Locale.US, "%.2f", maxFPS));
-        System.out.println("Duration       : " + String.format(Locale.US, "%.2f", benchmarkDuration) + "s");
-        System.out.println("Min Triangles/s: " + String.format(Locale.US, "%.0f", minTrianglesPerSecond));
-        System.out.println("Max Triangles/s: " + String.format(Locale.US, "%.0f", maxTrianglesPerSecond));
-    }
-
-    private void saveResultsToCSV() {
-        String filepath = "C:\\Users\\marti\\IdeaProjects\\Defi V5\\src\\engines\\graphicEngine\\io\\benchmarkResults.csv";
-        File file = new File(filepath);
-        boolean fileExists = file.exists();
-
-        try (FileWriter fw = new FileWriter(file, true);
-             BufferedWriter bw = new BufferedWriter(fw)) {
-
-            if (!fileExists) {
-                file.getParentFile().mkdirs();
-                bw.write("Date;Average FPS;Min FPS;Max FPS;Duration (s);Frames Measured;Total Triangle Rendered;Average Triangle/Frame;Min Triangles/s;Max Triangles/s");
-                bw.newLine();
+        private void computeBenchmarkResults() {
+            if (metrics.totalRenderedFrames == 0) {
+                System.out.println("\n-> [PROFILE] No data collected");
+                return;
             }
 
-            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            metrics.benchmarkDuration = (metrics.benchmarkTimeEnd - metrics.benchmarkTimeStart) / 1_000_000_000.0;
+            metrics.benchmarkAverageFPS = MEASURE_FRAMES / metrics.benchmarkDuration;
 
-            String line = String.format(Locale.US, "%s;%.2f;%.2f;%.2f;%.4f;%d;%d;%d;%.2f;%.2f",
-                    timestamp,
-                    benchmarkAverageFPS,
-                    minFPS,
-                    maxFPS,
-                    benchmarkDuration,
-                    MEASURE_FRAMES,
-                    benchmarkTotalTriangleCount,
-                    benchmarkTotalTriangleCount / MEASURE_FRAMES,
-                    minTrianglesPerSecond,
-                    maxTrianglesPerSecond
-            );
+            if (metrics.minTrianglesPerSecond == Double.MAX_VALUE) {
+                metrics.minTrianglesPerSecond = 0;
+            }
 
-            bw.write(line);
-            bw.newLine();
+            float sum = 0;
+            metrics.maxFrameTime = 0;
+            metrics.minFrameTime = Float.MAX_VALUE;
 
-            System.out.println("-> Results saved in " + filepath);
+            int sampleLimit = Math.min(metrics.totalRenderedFrames, frameTimesBuffer.length);
+            for (int i = 0; i < sampleLimit; i++) {
+                float ft = frameTimesBuffer[i];
+                sum += ft;
+                if (ft > metrics.maxFrameTime) metrics.maxFrameTime = ft;
+                if (ft < metrics.minFrameTime) metrics.minFrameTime = ft;
+            }
 
-        } catch (IOException e) {
-            System.err.println("CSV save error : " + e.getMessage());
-            e.printStackTrace();
+            metrics.averageFrameTime = sum / sampleLimit;
+
+            java.util.Arrays.sort(frameTimesBuffer, 0, sampleLimit);
+            int onePercentCount = Math.max(1, sampleLimit / 100);
+
+            float sumBest = 0;
+            for (int i = 0; i < onePercentCount; i++) {
+                sumBest += frameTimesBuffer[i];
+            }
+            metrics.averageBestFrameTime = sumBest / onePercentCount;
+            metrics.onePercentHighFPS = 1.0f / metrics.averageBestFrameTime;
+
+
+            float sumWorst = 0;
+            for (int i = sampleLimit - onePercentCount; i < sampleLimit; i++) {
+                sumWorst += frameTimesBuffer[i];
+            }
+            metrics.averageWorstFrameTime = sumWorst / onePercentCount;
+            metrics.onePercentLowFPS = 1.0f / metrics.averageWorstFrameTime;
+
+            metrics.averageTrianglesPerFrame = (float) metrics.benchmarkTotalRenderedTriangleCount / metrics.totalRenderedFrames;
+
+
+            metrics.geometryPassDuration = (float) (this.pipeline.profilerRawData.telemetryPipelineValue[0] / 1_000_000_000.0f) / metrics.totalRenderedFrames;
+            metrics.rasterizationPassDuration = (float) (this.pipeline.profilerRawData.telemetryPipelineValue[18] / 1_000_000_000.0f) / metrics.totalRenderedFrames;
+
+
+            for (int i = 0; i < 16; i++) {
+                int activeFrames = this.pipeline.profilerRawData.geoThreadFrameCount[i];
+                if (activeFrames > 0) {
+                    metrics.geometryThreadOccupation[i] = this.pipeline.profilerRawData.geoThreadOccupancySum[i] / activeFrames;
+                } else {
+                    metrics.geometryThreadOccupation[i] = 0.0;
+                }
+            }
+
+            for (int i = 0; i < 16; i++) {
+                int activeFrames = this.pipeline.profilerRawData.rasterThreadFrameCount[i];
+                if (activeFrames > 0) {
+                    metrics.rasterizationThreadOccupation[i] = this.pipeline.profilerRawData.rasterThreadOccupancySum[i] / activeFrames;
+                } else {
+                    metrics.rasterizationThreadOccupation[i] = 0.0;
+                }
+            }
+
+            metrics.geometryPassDurationRatio = (metrics.geometryPassDuration /(metrics.geometryPassDuration + metrics.rasterizationPassDuration)) * 100;
+            metrics.rasterizationPassDurationRatio = (metrics.rasterizationPassDuration /(metrics.geometryPassDuration + metrics.rasterizationPassDuration)) * 100;
+        }
+
+        private void printBenchmarkResult() {
+            if (this.metrics == null) return;
+
+            System.out.println("\n==================================================");
+            System.out.println("-> [PROFILE] BENCHMARK REPORT");
+            System.out.println("==================================================");
+
+            System.out.println("[GENERAL]");
+            System.out.printf("     |-- Benchmark Duration : %.3f s%n", metrics.benchmarkDuration);
+            System.out.printf("     |-- Total frames       : %d%n", metrics.totalRenderedFrames);
+
+            System.out.println("--------------------------------------------------");
+            System.out.println("[PERFORMANCE & FLUIDITY]");
+            System.out.printf("     |-- Mean FPS           : %.2f FPS%n", metrics.benchmarkAverageFPS);
+            System.out.printf("     |-- 1%% High FPS       : %.2f FPS%n", metrics.onePercentHighFPS);
+            System.out.printf("     |-- 1%% Low FPS        : %.2f FPS%n", metrics.onePercentLowFPS);
+            System.out.printf("     |-- Average Frame Time : %.3f ms%n", metrics.averageFrameTime * 1000.0);
+            System.out.printf("     |-- Best frame         : %.3f ms (équiv. %.1f FPS)%n", metrics.minFrameTime * 1000.0, metrics.minFrameTime > 0 ? 1.0 / metrics.minFrameTime : 0.0);
+            System.out.printf("     |-- Worst Frame        : %.3f ms (équiv. %.1f FPS)%n", metrics.maxFrameTime * 1000.0, metrics.maxFrameTime > 0 ? 1.0 / metrics.maxFrameTime : 0.0);
+
+            System.out.println("--------------------------------------------------");
+            System.out.println("[PIPELINE RATIOS]");
+            System.out.printf("     |-- Geometry           : %s (%.2f ms)%n", createProgressBar(metrics.geometryPassDurationRatio), metrics.geometryPassDuration);
+            System.out.printf("     |-- Rasterization      : %s (%.2f ms)%n", createProgressBar(metrics.rasterizationPassDurationRatio), metrics.rasterizationPassDuration);
+
+            System.out.println("--------------------------------------------------");
+            System.out.println("[GEOMETRY WORKLOAD]");
+            System.out.printf("     |-- Total Triangles    : %d%n", metrics.benchmarkTotalRenderedTriangleCount);
+            System.out.printf("     |-- Avg Triangles/Frame: %.0f%n", metrics.averageTrianglesPerFrame);
+            System.out.printf("     |-- Peak Throughput    : %.0f Tri/sec%n", metrics.maxTrianglesPerSecond);
+            System.out.printf("     |-- Lowest Throughput  : %.0f Tri/sec%n", metrics.minTrianglesPerSecond);
+            System.out.println("     |-- Top Active Cores   :");
+            printTopThreads(metrics.geometryThreadOccupation, 4); // Affiche les 4 meilleurs
+
+            System.out.println("--------------------------------------------------");
+            System.out.println("[RASTERIZATION WORKLOAD]");
+            System.out.printf("     |-- Triangles Drawn    : %d / frame%n", metrics.rasterizedTrianglesPerFrame);
+            System.out.printf("     |-- Pixels Processed   : %d px / frame%n", metrics.pixelsProcessedPerFrame);
+            System.out.printf("     |-- Fill Rate          : %.1f Megapixels/sec%n", metrics.fillRateMegapixels);
+            System.out.printf("     |-- Overdraw Ratio     : %.2fx%n", metrics.overdrawRatio);
+            System.out.printf("     |-- Z-Buffer Rejects   : %d px (%.1f%%)%n", metrics.zBufferRejectionsPerFrame, metrics.zBufferRejectionPercentage);
+            System.out.println("     |-- Top Active Cores   :");
+            printTopThreads(metrics.rasterizationThreadOccupation, 4);
+            System.out.println("==================================================\n");
+
+            java.util.Scanner scanner = new java.util.Scanner(System.in);
+            System.out.print("-> [BENCHMARK] Commentary : ");
+            metrics.commentary = scanner.nextLine();
+        }
+    
+        private void saveBenchmarkResultToCSV() {
+            String csvFileName = "performance_metrics_ver_7.csv";
+            File file = new File(csvFileName);
+            
+            boolean exists = file.exists();
+            try (FileWriter fw = new FileWriter(file, true);
+                 PrintWriter pw = new PrintWriter(fw)) {
+    
+                if (!exists) {
+                    StringBuilder header = new StringBuilder("Date,Commentary,Duration_s,Frames,Avg_FPS,1%_Low_FPS,1%_High_FPS,Avg_FrameTime_ms,Best_FrameTime_ms,Worst_FrameTime_ms,Total_Triangles,Triangles_Per_Frame,Min_Tri_s,Max_Tri_s,Geo_Pass_ms,Raster_Pass_ms,Geo_Ratio_%,Raster_Ratio_%");
+
+                    // Colonnes individuelles pour chaque cœur en géométrie
+                    for (int i = 0; i < 16; i++) {
+                        header.append(",Geo_thread_").append(i+1);
+                    }
+                    // Colonnes individuelles pour chaque cœur en rastérisation
+                    for (int i = 0; i < 16; i++) {
+                        header.append(",Raster_thread_").append(i+1);
+                    }
+    
+                    pw.println(header);
+                }
+                
+                String cleanCommentary = "\"" + metrics.commentary.replace("\"", "\"\"") + "\"";
+                String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+                StringBuilder row = new StringBuilder();
+                row.append(String.format(Locale.US, "%s,%s,%.3f,%d,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%d,%d,%.0f,%.0f,%.3f,%.3f,%.2f,%.2f",
+                        timestamp,                                     // Date
+                        cleanCommentary,                               // Commentary
+                        metrics.benchmarkDuration,                             // Duration_s
+                        metrics.totalRenderedFrames,                                   // Frames
+                        metrics.benchmarkAverageFPS,                           // Avg_FPS
+                        metrics.onePercentLowFPS,                              // 1%_Low_FPS
+                        metrics.onePercentHighFPS,                             // 1%_High_FPS
+                        metrics.averageFrameTime * 1000.0f,                            // Avg_FrameTime_ms
+                        metrics.averageBestFrameTime * 1000.0f,                        // Best_FrameTime_ms
+                        metrics.averageWorstFrameTime * 1000.0f,                       // Worst_FrameTime_ms
+                        metrics.benchmarkTotalRenderedTriangleCount,                   // Total_Triangles
+                        metrics.benchmarkTotalRenderedTriangleCount / metrics.totalRenderedFrames,  // Triangles_Per_Frame
+                        metrics.minTrianglesPerSecond,                         // Min_Tri_s
+                        metrics.maxTrianglesPerSecond,                         // Max_Tri_s
+                        metrics.geometryPassDuration * 1000.0f,                        // Geo_Pass_ms
+                        metrics.rasterizationPassDuration * 1000.0f,                       // Raster_Pass_ms
+                        metrics.geometryPassDurationRatio,                     // Geo_Ratio_%
+                        metrics.rasterizationPassDurationRatio                 // Raster_Ratio_%
+                ));
+    
+                for (double gOcc : metrics.geometryThreadOccupation) {
+                    row.append(String.format(Locale.US, ",%.2f", gOcc));
+                }
+    
+                for (double rOcc : metrics.rasterizationThreadOccupation) {
+                    row.append(String.format(Locale.US, ",%.2f", rOcc));
+                }
+    
+                pw.println(row);
+                System.out.println("-> [TELEMETRY] data successfully exported in : " + csvFileName);
+    
+            } catch (IOException e) {
+                System.err.println("-> [ERROR] Exportation impossible : " + e.getMessage());
+            }
+        }
+
+        // Trie les cœurs et affiche uniquement les 4 plus actifs
+        private void printTopThreads(double[] occupations, int maxDisplayedThreads) {
+            Integer[] indices = new Integer[16];
+            for (int i = 0; i < 16; i++) indices[i] = i;
+
+            // Tri décroissant
+            java.util.Arrays.sort(indices, (a, b) -> Double.compare(occupations[b], occupations[a]));
+
+            int printed = 0;
+            for (int i = 0; i < 16; i++) {
+                int threadId = indices[i];
+                double occ = occupations[threadId];
+                if (occ > 0.01) { // On ignore les cœurs à 0%
+                    System.out.printf("     |     Thread %-2d : %s%n", threadId, createProgressBar(occ));
+                    printed++;
+                }
+                if (printed == maxDisplayedThreads) break;
+            }
+            if (printed == 0) {
+                System.out.println("     |     Aucun thread actif mesuré.");
+            }
+        }
+
+        private String createProgressBar(double percentage) {
+            int segmentCount = 20;
+            int solidBars = (int) (percentage * segmentCount / 100);
+            if (percentage > 0 && solidBars == 0) solidBars = 1; // Au moins 1 barre si > 0%
+            if (solidBars > segmentCount) solidBars = segmentCount;
+
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < segmentCount; i++) {
+                sb.append(i < solidBars ? "█" : "░");
+            }
+            sb.append(String.format(Locale.US, "] %5.1f%%", percentage));
+            return sb.toString();
+        }
+
+        public void resetTelemetry() {
+            java.util.Arrays.fill(this.geoThreadOccupancySum, 0.0);
+            java.util.Arrays.fill(this.rasterThreadOccupancySum, 0.0);
+            java.util.Arrays.fill(this.geoThreadFrameCount, 0);
+            java.util.Arrays.fill(this.rasterThreadFrameCount, 0);
+
+            java.util.Arrays.fill(this.telemetryPipelineValue, 0L);
+
+            this.totalGeometryTimeMs = 0;
+            this.totalRasterizationTimeMs = 0;
+        }
+
+        public boolean isRunning() {
+            return currentState == State.WARMUP ||
+                    currentState == State.MEASURING ||
+                    currentState == State.COOL_DOWN;
         }
     }
-
-    public boolean isRunning() {
-        return currentState == State.WARMUP ||
-                currentState == State.MEASURING ||
-                currentState == State.COOL_DOWN;
-    }
-
-    public boolean isMeasuring() {
-        return currentState == State.MEASURING;
-    }
-
-    public double getBenchmarkDuration() {
-        return benchmarkDuration;
-    }
-
-    public double getBenchmarkAverageFPS() {
-        return benchmarkAverageFPS;
-    }
-
-    public State getCurrentState() {
-        return currentState;
-    }
-
-    public Scene getBenchmarkScene() {
-        return benchmarkScene;
-    }
-}

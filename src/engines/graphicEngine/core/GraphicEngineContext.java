@@ -4,7 +4,6 @@ import engines.graphicEngine.math.geometry.Plane;
 import engines.graphicEngine.math.geometry.Vertex3D;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Camera;
-import engines.graphicEngine.scene.Scene;
 
 import javax.swing.*;
 import java.awt.*;
@@ -26,12 +25,12 @@ public class GraphicEngineContext {
 
     private Plane[] windowBorderPlanes;
 
-    private int triangleCountFrame;
+    private int currentFrameRenderedTriangleCount;
     private long totalTriangleCount = 0;
 
-    private double deltaTime;
-    private double elapsedTime = 0;
-    private int elapsedFrame = 0;
+    private double deltaFrameTime;   //Instant Frame time?
+    private double elapsedTime = 0; //Total time since the start
+    private int elapsedFrame = 0;   //Total number of frames since the start
     private int currentFPS = 0;
     private int currentUPS = 0;
 
@@ -45,14 +44,14 @@ public class GraphicEngineContext {
         this.windowWidth = windowWidth;
         this.windowHeight = windowHeight;
         this.windowPosition = new Vertex3D(0, 0, 0);
-        this.triangleCountFrame = 0;
-        this.deltaTime = 0.1;
+        this.currentFrameRenderedTriangleCount = 0;
+        this.deltaFrameTime = 0.1;
     }
 
     public void updateWindowInformation() {
         this.windowWidth = graphicEngine.getWidth();
         this.windowHeight = graphicEngine.getHeight();
-//        System.out.println(windowHeight + " " + windowWidth);
+
         if (graphicEngine.isShowing()) {
             Point loc = graphicEngine.getLocationOnScreen();
             this.windowPosition = new Vertex3D(loc.x, loc.y, 0);
@@ -76,12 +75,12 @@ public class GraphicEngineContext {
     }
 
     public void incrementTriangleCount(int count) {
-        this.triangleCountFrame += count;
+        this.currentFrameRenderedTriangleCount += count;
         this.totalTriangleCount += count;
     }
 
-    public void resetNbRenderedTriangle() {
-        this.setTriangleCountFrame(0);
+    public void resetCurrentFrameRenderedTriangleCount() {
+        this.setCurrentFrameRenderedTriangleCount(0);
     }
 
     public int getWindowWidth() {
@@ -92,16 +91,24 @@ public class GraphicEngineContext {
         return windowHeight;
     }
 
-    public int getTriangleCountFrame() {
-        return triangleCountFrame;
+    public void setWindowWidth(int windowWidth) {
+        this.windowWidth = windowWidth;
     }
 
-    public void setTriangleCountFrame(int triangleCountFrame) {
-        this.triangleCountFrame = triangleCountFrame;
+    public void setWindowHeight(int windowHeight) {
+        this.windowHeight = windowHeight;
     }
 
-    public double getDeltaTime() {
-        return deltaTime;
+    public int getCurrentFrameRenderedTriangleCount() {
+        return currentFrameRenderedTriangleCount;
+    }
+
+    public void setCurrentFrameRenderedTriangleCount(int currentFrameRenderedTriangleCount) {
+        this.currentFrameRenderedTriangleCount = currentFrameRenderedTriangleCount;
+    }
+
+    public double getDeltaFrameTime() {
+        return deltaFrameTime;
     }
 
     public Vertex3D getWindowPosition() {
@@ -120,8 +127,8 @@ public class GraphicEngineContext {
         this.camera = camera;
     }
 
-    public void setDeltaTime(double deltaTime) {
-        this.deltaTime = deltaTime;
+    public void setDeltaFrameTime(double deltaFrameTime) {
+        this.deltaFrameTime = deltaFrameTime;
     }
 
     public double getElapsedTime() {

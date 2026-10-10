@@ -11,7 +11,6 @@ import engines.graphicEngine.renderer.Texture;
 import engines.graphicEngine.scene.GameObject;
 import engines.graphicEngine.scene.lightRelative.PointLight;
 
-import javax.swing.*;
 import java.awt.*;
 import java.nio.file.Paths;
 
@@ -101,7 +100,7 @@ public class FirstGameTest extends GameEngine {
     @Override
     public void updateGameLogic() {
         if (graphicEngineContext.isBenchmarkRunning()) {
-            this.graphicEngineContext.getBenchmarkManager().benchMarkSceneUpdate();
+            this.graphicEngineContext.getBenchmarkManager().updateBenchmarkScene();
         } else {
             camera.getCameraSpot().setOn(true);
 

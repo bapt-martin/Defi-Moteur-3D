@@ -55,7 +55,6 @@ public class InputManager {
     public void toggleBenchmarkMode() {
         boolean isBPressedNow = keyboardInput.getKeysPressed()[KeyEvent.VK_B];
         if (isBPressedNow && !isBenchmarkTogglePreviously) {
-
             BenchmarkManager bm = graphicEngineContext.getBenchmarkManager();
 
             if (!graphicEngineContext.isBenchmarkRunning()) {
@@ -66,7 +65,6 @@ public class InputManager {
                 bm.cancel();
             }
         }
-
         isBenchmarkTogglePreviously = isBPressedNow;
     }
 
@@ -105,13 +103,13 @@ public class InputManager {
     }
 
     public void processInputs() {
-        double deltaFrameTime = 1.0 / graphicEngineContext.getUPS_TARGET();
+        double frameTimeReference = 1.0 / graphicEngineContext.getUPS_TARGET();
         double translationCameraSpeed = camera.getdTranslationCameraSpeed();
         double rotationCameraSpeed = camera.getdRotationCameraSpeed();
 
-        this.handleTranslation(deltaFrameTime, translationCameraSpeed);
-        this.handleRotation(deltaFrameTime, rotationCameraSpeed);
-        this.applyMouseRotation(deltaFrameTime, rotationCameraSpeed);
+        this.handleTranslation(frameTimeReference, translationCameraSpeed);
+        this.handleRotation(frameTimeReference, rotationCameraSpeed);
+        this.applyMouseRotation(frameTimeReference, rotationCameraSpeed);
 
         this.toggleBenchmarkMode();
         this.toggleHUD();
