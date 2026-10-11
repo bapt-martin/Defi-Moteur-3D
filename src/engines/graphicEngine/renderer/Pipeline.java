@@ -1,5 +1,6 @@
 package engines.graphicEngine.renderer;
 
+import engines.graphicEngine.core.BenchmarkManager;
 import engines.graphicEngine.core.GraphicEngineContext;
 import engines.graphicEngine.math.geometry.Vertex3D;
 import engines.graphicEngine.scene.GameObject;
@@ -49,40 +50,29 @@ public class Pipeline {
     public static class PipelineProfilerRawData {
         public long totalPipelineExecutionTimeNs = 0;
 
-        public long geometryPassTotalDurationNs = 0;       // Ex [0] : Setup + Multithreading
-        public long geometryPassPureMathDurationNs = 0;    // Ex [1] : Juste le Multithreading
+        public long geometryPassTotalDurationNs = 0;
+        public long geometryPassPureMathDurationNs = 0;
         public long geometryPassMergeDurationNs = 0;
 
-        public long rasterizationPassTotalDurationNs = 0;  // Ex [18] : Setup + Multithreading
-        public long rasterizationPassPureMathDurationNs = 0; // Ex [19] : Juste le Multithreading
+        public long rasterizationPassTotalDurationNs = 0;
+        public long rasterizationPassPureMathDurationNs = 0;
 
-        // =========================================================
-        // TIMINGS DES THREADS (Anciennement indices 2 à 17, et 20 à 35)
-        // =========================================================
         public final long[] geometryThreadTimesNs = new long[MAX_THREADS_CAPACITY];
         public final long[] rasterizationThreadTimesNs = new long[MAX_THREADS_CAPACITY];
 
 
-        // --- 2. GÉOMÉTRIE (CULLING) ---
-        // Somme de tous les triangles envoyés au pipeline sur le benchmark
         public long totalSubmittedTriangles = 0;
-        // Somme des triangles qui ont survécu au Culling 3D
         public long totalSurvivingGeoTriangles = 0;
 
-        // --- 3. RASTÉRISATION (TRIANGLES) ---
-        // Somme des triangles finalement dessinés (après le clipping 2D)
         public long totalRasterizedTriangles = 0;
 
-        // --- 4. RASTÉRISATION (PIXELS) ---
         public final long[] pixelsProcessedPerThread = new long[MAX_THREADS_CAPACITY];
         public final long[] zBufferRejectionsPerThread = new long[MAX_THREADS_CAPACITY];
 
-        // --- 5. MÉMOIRE ---
         public long totalUsedMemoryBytesSum = 0;
         public long previousFrameMemoryBytes = 0;
         public long peakUsedMemoryBytes = 0;
         public int garbageCollectorTriggerCount = 0;
-
 
         public void resetTelemetry() {
             this.totalPipelineExecutionTimeNs = 0;
@@ -137,7 +127,7 @@ public class Pipeline {
         this.postGeometryPassTriangles = new ArrayList<>();
         this.trianglesReadyToRender = new ArrayList<>();
 
-        this.updateNumThreads(1);
+        this.updateNumThreads(0);
         this.executor = Executors.newFixedThreadPool(this.numThreads);
 
         this.updateTilesPool(32);
@@ -167,18 +157,20 @@ public class Pipeline {
         long execEnd = System.nanoTime();
         profilerRawData.totalPipelineExecutionTimeNs += (execEnd - execStart);
 
-        Runtime rt = Runtime.getRuntime();
-        long currentRamBytes = rt.totalMemory() - rt.freeMemory();
-        profilerRawData.totalUsedMemoryBytesSum += currentRamBytes;
+        if (graphicEngineContext.getBenchmarkRunningState() == BenchmarkManager.State.MEASURING) {
+            Runtime rt = Runtime.getRuntime();
+            long currentRamBytes = rt.totalMemory() - rt.freeMemory();
+            profilerRawData.totalUsedMemoryBytesSum += currentRamBytes;
 
-        if (currentRamBytes > profilerRawData.peakUsedMemoryBytes) {
-            profilerRawData.peakUsedMemoryBytes = currentRamBytes;
-        }
+            if (currentRamBytes > profilerRawData.peakUsedMemoryBytes) {
+                profilerRawData.peakUsedMemoryBytes = currentRamBytes;
+            }
 
-        if (profilerRawData.previousFrameMemoryBytes - currentRamBytes > 1_000_000) {
-            profilerRawData.garbageCollectorTriggerCount++;
+            if (profilerRawData.previousFrameMemoryBytes - currentRamBytes > 1_000_000) {
+                profilerRawData.garbageCollectorTriggerCount++;
+            }
+            profilerRawData.previousFrameMemoryBytes = currentRamBytes;
         }
-        profilerRawData.previousFrameMemoryBytes = currentRamBytes;
     }
 
     public void updateViewMatrix() {
@@ -231,14 +223,12 @@ public class Pipeline {
         } else if (activeTriangleCount < 10000) {
             this.updateNumThreads(Math.min(8, Runtime.getRuntime().availableProcessors()));
         } else {
-            this.updateNumThreads(1);
+            this.updateNumThreads(0);
         }
 
 
         List<Future<List<Triangle>>> futures = new ArrayList<>();
         int chunkSize = this.activeTriangleCount / this.numThreads;
-
-        long[] currentFrameWorkerTimes = new long[this.numThreads];
 
         long passStartTime = System.nanoTime();
             for (int i = 0; i < this.numThreads; i++) {
@@ -274,35 +264,25 @@ public class Pipeline {
                     return localProcessedTriBuffer;
                 }));
             }
-
-        List<List<Triangle>> allResults = new ArrayList<>();
-
-        // 2. Le Main Thread attend que tous les cœurs finissent (future.get() met en pause)
-        for (Future<List<Triangle>> future : futures) {
-            try {
-                allResults.add(future.get());
-            } catch (Exception e) {
-                e.printStackTrace();
+            List<List<Triangle>> allResults = new ArrayList<>();
+            for (Future<List<Triangle>> future : futures) {
+                try {
+                    allResults.add(future.get());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-        }
-        // LÀ, TOUS LES CŒURS ONT FINI LEURS MATHS !
         long endOfMathTime = System.nanoTime();
-
-        // 3. On chronomètre juste le drame absolu du addAll
-        for (List<Triangle> list : allResults) {
-            this.postGeometryPassTriangles.addAll(list);
-        }
-
-        // Fin totale de la passe
+            for (List<Triangle> list : allResults) {
+                this.postGeometryPassTriangles.addAll(list);
+            }
         long passEndTime = System.nanoTime();
 
         profilerRawData.geometryPassPureMathDurationNs += (passEndTime - passStartTime);
         profilerRawData.geometryPassMergeDurationNs += (passEndTime - endOfMathTime);
 
-        // activeTriangleCount = Ce qui a été envoyé par la scène
         profilerRawData.totalSubmittedTriangles += this.activeTriangleCount;
 
-// geometryProcessedTri.size() = Ce qui a survécu au Backface/Frustum 3D
         profilerRawData.totalSurvivingGeoTriangles += this.postGeometryPassTriangles.size();
     }
 

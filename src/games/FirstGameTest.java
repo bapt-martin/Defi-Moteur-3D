@@ -1,6 +1,7 @@
 package games;
 
 import engines.gameEngine.GameEngine;
+import engines.graphicEngine.core.BenchmarkManager;
 import engines.graphicEngine.io.ObjLoader;
 import engines.graphicEngine.math.geometry.Mesh;
 import engines.graphicEngine.math.geometry.Plane;
@@ -99,7 +100,7 @@ public class FirstGameTest extends GameEngine {
 
     @Override
     public void updateGameLogic() {
-        if (graphicEngineContext.isBenchmarkRunning()) {
+        if (graphicEngineContext.getBenchmarkRunningState() == BenchmarkManager.State.MEASURING) {
             this.graphicEngineContext.getBenchmarkManager().updateBenchmarkScene();
         } else {
             camera.getCameraSpot().setOn(true);

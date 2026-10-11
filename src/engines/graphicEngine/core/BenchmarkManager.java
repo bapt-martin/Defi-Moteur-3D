@@ -24,7 +24,6 @@
             IDLE,
             WARMUP,
             MEASURING,
-            COOL_DOWN,
             FINISHED
         }
 
@@ -43,7 +42,7 @@
         private int startFrameOfCurrentState = 0;
 
         private final int WARMUP_FRAMES = 5;
-        private final int MEASURE_FRAMES = 15;
+        private final int MEASURE_FRAMES = 5;
         private final int COOLDOWN_FRAMES = 5;
 
         boolean telemetryResetDone = false;
@@ -271,14 +270,15 @@
             this.previousScene = this.pipeline.getScene();
             this.pipeline.setScene(benchmarkScene);
 
-
             this.startFrameOfCurrentState = graphicEngineContext.getElapsedFrame();
+
+            this.metrics = new BenchmarkMetrics();
 
             this.metrics.framesDurationBuffer = new float[MEASURE_FRAMES];
             this.metrics.minTrianglesPerSecond = Double.MAX_VALUE;
             this.metrics.maxTrianglesPerSecond = 0.0;
-            metrics.benchmarkAverageFPS = 0;
-            metrics.benchmarkDurationSec = 0;
+            this.metrics.benchmarkAverageFPS = 0;
+            this.metrics.benchmarkDurationSec = 0;
 
             if (this.pipeline.profilerRawData != null) {
                 this.pipeline.profilerRawData.resetTelemetry();
@@ -288,15 +288,14 @@
         public void cancel() {
             System.out.println("--- BENCHMARK CANCELLED ---");
             this.currentState = State.IDLE;
-            graphicEngineContext.setBenchmarkRunning(this.isRunning());
         }
     
         public void update() {
             if (currentState == State.IDLE || currentState == State.FINISHED) return;
-    
+
             int currentFrame = graphicEngineContext.getElapsedFrame();
-            int frameNumber = currentFrame - startFrameOfCurrentState - 1;
-    
+            int frameNumber = currentFrame - startFrameOfCurrentState;
+
             long currentTime = System.nanoTime();
 
             switch (currentState) {
@@ -304,9 +303,13 @@
                     if (frameNumber >= WARMUP_FRAMES) {
                         System.out.println("--- WARMUP DONE ---");
                         System.out.println("--- START OF MEASURE ---");
-    
                         this.currentState = State.MEASURING;
-                        graphicEngineContext.setBenchmarkRunning(this.isRunning());
+
+                        if (this.pipeline.profilerRawData != null) {
+                            this.pipeline.profilerRawData.resetTelemetry();
+                        }
+
+                        metrics.totalBenchmarkedFrames = 0;
 
                         metrics.previousFrameTime = currentTime;
 
@@ -320,34 +323,16 @@
                         metrics.benchmarkTimeStartNs = System.nanoTime();
                     }
                     break;
-    
+
                 case MEASURING:
-                    System.out.println(frameNumber);
-                    if (frameNumber >= MEASURE_FRAMES) {
-                        System.out.println("--- MEASURE DONE ---");
-                        System.out.println("--- START OF COOL DOWN ---");
-                        this.currentState = State.COOL_DOWN;
-
-                        metrics.benchmarkTimeEndNs = currentTime;
-
-                        graphicEngineContext.setBenchmarkRunning(this.isRunning());
-
-                        this.startFrameOfCurrentState = currentFrame;
-                        break;
-                    }
-
                     long trianglesThisFrame = graphicEngineContext.getCurrentFrameRenderedTriangleCount();
                     metrics.totalBenchmarkedTrianglesCount += trianglesThisFrame;
 
-                    System.out.println(metrics.totalBenchmarkedTrianglesCount);
-                    System.out.println(trianglesThisFrame);
-
-                    metrics.framesDurationBuffer[frameNumber] = (float) graphicEngineContext.getCurrentFrameDuration();
-                    metrics.totalBenchmarkedFrames++;
+                    metrics.framesDurationBuffer[metrics.totalBenchmarkedFrames] = (float) graphicEngineContext.getCurrentFrameDuration();
 
                     if (currentTime - metrics.previousFrameTime > 0) {
                         double deltaFrameTime = graphicEngineContext.getCurrentFrameDuration();
-    
+
                         double currentTrianglesPerSecond = trianglesThisFrame / deltaFrameTime;
 
                         if (currentTrianglesPerSecond < metrics.minTrianglesPerSecond) {
@@ -360,15 +345,18 @@
 
                     metrics.previousFrameTime = currentTime;
 
-                    break;
-    
-                case COOL_DOWN:
-                    if (frameNumber >= COOLDOWN_FRAMES) {
-                        System.out.println("--- COOL DOWN DONE ---");
+                    metrics.totalBenchmarkedFrames++;
+                    if (frameNumber >= MEASURE_FRAMES) {
+                        System.out.println("--- MEASURE DONE ---");
+
+                        metrics.benchmarkTimeEndNs = currentTime;
+                        this.startFrameOfCurrentState = currentFrame;
+
                         finish();
+                        break;
                     }
                     break;
-    
+
                 case IDLE:
                     System.out.println("--- BENCHMARK IDLE ---");
                     break;
@@ -377,28 +365,26 @@
                     break;
             }
         }
-    
+
         public void finish() {
             System.out.println("--- END OF BENCHMARK ---");
+            this.currentState = State.FINISHED;
+
             this.pipeline.setScene(previousScene);
             telemetryResetDone = false;
 
             metrics.windowHeight = graphicEngineContext.getWindowHeight();
             metrics.windowWidth = graphicEngineContext.getWindowWidth();
-    
+
             java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this.graphicEngineContext.getGraphicEngine());
             if (parentWindow != null) {
                 parentWindow.dispose();
             }
-            graphicEngineContext.setRunning(false);
+            this.graphicEngineContext.setRunning(false);
 
             computeBenchmarkResults();
             printBenchmarkResult();
             saveBenchmarkResultToCSV();
-
-            this.currentState = State.FINISHED;
-
-            graphicEngineContext.setBenchmarkRunning(this.isRunning());
         }
 
         private void computeBenchmarkResults() {
@@ -477,7 +463,7 @@
             long totalSurviving = this.pipeline.profilerRawData.totalSurvivingGeoTriangles;
             long culledTriangles = totalSubmitted - totalSurviving;
 
-            metrics.averageSubmittedTrianglesPerFrame = (float) metrics.totalBenchmarkedTrianglesCount / metrics.totalBenchmarkedFrames;
+            metrics.averageSubmittedTrianglesPerFrame = (float) totalSubmitted / metrics.totalBenchmarkedFrames;
             metrics.averageCulledTrianglesPerFrame = culledTriangles / metrics.totalBenchmarkedFrames;
             metrics.averageCullingEfficiencyPct = (totalSubmitted > 0) ? ((float) culledTriangles / totalSubmitted) * 100.0f : 0.0f;
             metrics.averageRasterizedTrianglesPerFrame = this.pipeline.profilerRawData.totalRasterizedTriangles / metrics.totalBenchmarkedFrames;
@@ -545,18 +531,20 @@
 
             System.out.println("[GENERAL]");
             System.out.printf("     |-- Benchmark Duration : %.3f s%n", metrics.benchmarkDurationSec);
-            System.out.printf("     |-- Total Benchmark frames       : %d%n", metrics.totalBenchmarkedFrames);
+            // AJOUT: %,d pour les frames (au cas où tu fasses un gros benchmark)
+            System.out.printf("     |-- Total Benchmark frames     : %,d%n", metrics.totalBenchmarkedFrames);
 
             System.out.println("--------------------------------------------------");
             System.out.println("[PERFORMANCE & FLUIDITY]");
-            System.out.printf("     |-- Mean FPS           : %.2f FPS%n", metrics.benchmarkAverageFPS);
-            System.out.printf("     |-- 1%% High FPS       : %.2f FPS%n", metrics.onePercentHighFPS);
-            System.out.printf("     |-- 1%% Low FPS        : %.2f FPS%n", metrics.onePercentLowFPS);
-            System.out.printf("     |-- Average Frame Duration : %.3f ms%n", metrics.averageFrameDurationSec * 1000.0);
+            System.out.printf("     |-- Mean FPS                   : %.2f FPS%n", metrics.benchmarkAverageFPS);
+            System.out.printf("     |-- 1%% High FPS               : %.2f FPS%n", metrics.onePercentHighFPS);
+            System.out.printf("     |-- 1%% Low FPS                : %.2f FPS%n", metrics.onePercentLowFPS);
+            System.out.printf("     |-- Average Frame Duration     : %.3f ms%n", metrics.averageFrameDurationSec * 1000.0);
             System.out.printf("     |-- Best Frame Duration        : %.3f ms (équiv. %.1f FPS)%n", metrics.minFrameDurationSec * 1000.0, metrics.minFrameDurationSec > 0 ? 1.0 / metrics.minFrameDurationSec : 0.0);
             System.out.printf("     |-- Worst Frame Duration       : %.3f ms (équiv. %.1f FPS)%n", metrics.maxFrameDurationSec * 1000.0, metrics.maxFrameDurationSec > 0 ? 1.0 / metrics.maxFrameDurationSec : 0.0);
-            System.out.printf("     |-- Peak Triangle Throughput    : %.0f Tri/sec%n", metrics.maxTrianglesPerSecond);
-            System.out.printf("     |-- Lowest Triangle Throughput  : %.0f Tri/sec%n", metrics.minTrianglesPerSecond);
+            // AJOUT: %,.0f pour le Throughput
+            System.out.printf("     |-- Peak Triangle Throughput   : %,.0f Tri/sec%n", metrics.maxTrianglesPerSecond);
+            System.out.printf("     |-- Lowest Triangle Throughput : %,.0f Tri/sec%n", metrics.minTrianglesPerSecond);
 
             System.out.println("--------------------------------------------------");
             System.out.println("[PIPELINE TIMINGS (Avg/Frame)]");
@@ -564,27 +552,29 @@
             System.out.printf("     |-- Geometry Pass      : %s (%.2f ms)%n", createProgressBar(metrics.geometryPassDurationRatio), metrics.averageGeometryPassTotalDurationSec * 1000.0);
             System.out.printf("          |-- Pure Math     : %.3f ms%n", metrics.averageGeometryPassPureMathDurationSec * 1000.0);
             System.out.printf("          |-- Merge (addAll): %.3f ms%n", metrics.averageGeometryPassMergeDurationSec * 1000.0);
-            System.out.printf("     |-- Rasterization Pass Duration : %s (%.2f ms)%n", createProgressBar(metrics.rasterizationPassDurationRatio), metrics.averageRasterizationPassTotalDurationSec * 1000.0);
+            System.out.printf("     |-- Rasterization Pass : %s (%.2f ms)%n", createProgressBar(metrics.rasterizationPassDurationRatio), metrics.averageRasterizationPassTotalDurationSec * 1000.0);
             System.out.printf("          |-- Pure Math     : %.3f ms%n", metrics.averageRasterizationPassPureMathDurationSec * 1000.0);
             System.out.printf("          |-- Merge (Array) : %.3f ms%n", metrics.averageRasterizationPassMergeDurationSec * 1000.0);
 
             System.out.println("--------------------------------------------------");
             System.out.println("[GEOMETRY WORKLOAD]");
-            System.out.printf("     |-- Total Triangles    : %d%n", metrics.totalBenchmarkedTrianglesCount);
-            System.out.printf("     |-- Submitted          : %.0f Tri / frame%n", metrics.averageSubmittedTrianglesPerFrame);
-            System.out.printf("     |-- Culled             : %d Tri / frame (%.1f%% rejected)%n", metrics.averageCulledTrianglesPerFrame, metrics.averageCullingEfficiencyPct);
+            // AJOUT: %,d et %,.0f pour les volumes de triangles
+            System.out.printf("     |-- Total Triangles    : %,d%n", metrics.totalBenchmarkedTrianglesCount);
+            System.out.printf("     |-- Submitted          : %,.0f Tri / frame%n", metrics.averageSubmittedTrianglesPerFrame);
+            System.out.printf("     |-- Culled             : %,d Tri / frame (%.1f%% rejected)%n", metrics.averageCulledTrianglesPerFrame, metrics.averageCullingEfficiencyPct);
             System.out.println("     |-- Top Active Cores   :");
-            printTopThreads(metrics.geometryThreadPctOccupation, 4);
+            printTopThreads(metrics.geometryThreadPctOccupation, 16);
 
             System.out.println("--------------------------------------------------");
             System.out.println("[RASTERIZATION WORKLOAD]");
-            System.out.printf("     |-- Triangles Drawn    : %d / frame%n", metrics.averageRasterizedTrianglesPerFrame);
-            System.out.printf("     |-- Pixels Processed   : %d px / frame%n", metrics.averagePixelsProcessedPerFrame);
+            // AJOUT: %,d pour les gros volumes de pixels et Z-Buffer
+            System.out.printf("     |-- Triangles Drawn    : %,d / frame%n", metrics.averageRasterizedTrianglesPerFrame);
+            System.out.printf("     |-- Pixels Processed   : %,d px / frame%n", metrics.averagePixelsProcessedPerFrame);
             System.out.printf("     |-- Fill Rate          : %.1f Megapixels/sec%n", metrics.averageFillRateMegapixels);
             System.out.printf("     |-- Overdraw Ratio     : %.2fx%n", metrics.averageOverdrawRatio);
-            System.out.printf("     |-- Z-Buffer Rejects   : %d px (%.1f%%)%n", metrics.averageZBufferRejectionsPerFrame, metrics.averageZBufferRejectionPct);
+            System.out.printf("     |-- Z-Buffer Rejects   : %,d px (%.1f%%)%n", metrics.averageZBufferRejectionsPerFrame, metrics.averageZBufferRejectionPct);
             System.out.println("     |-- Top Active Cores   :");
-            printTopThreads(metrics.rasterizationThreadPctOccupation, 4);
+            printTopThreads(metrics.rasterizationThreadPctOccupation, 16);
 
             System.out.println("--------------------------------------------------");
             System.out.println("[SYSTEM & MEMORY]");
@@ -640,7 +630,7 @@
                 StringBuilder row = new StringBuilder();
                 row.append(String.format(Locale.US,
                         // Le format string (32 variables)
-                        "%s,%s,%.3f,%d,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f,%.3f,%.3f,%.3f,%.2f,%d,%.0f,%d,%.1f,%d,%.0f,%.0f,%d,%d,%.1f,%.2f,%.1f,%.2f",
+                        "%s,%s,%.3f,%d,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f,%.3f,%.3f,%.3f,%.2f,%d,%.0f,%d,%.1f,%d,%.0f,%.0f,%d,%d,%.1f,%.2f,%.1f,%.2f,%.2f,%d",
                         timestamp,                                                // 1
                         cleanCommentary,                                          // 2
                         metrics.benchmarkDurationSec,                             // 3
@@ -714,7 +704,7 @@
         }
 
         private String createProgressBar(double percentage) {
-            int segmentCount = 20;
+            int segmentCount = 30;
             int solidBars = (int) (percentage * segmentCount / 100);
             if (percentage > 0 && solidBars == 0) solidBars = 1; // Au moins 1 barre si > 0%
             if (solidBars > segmentCount) solidBars = segmentCount;
@@ -727,9 +717,7 @@
             return sb.toString();
         }
 
-        public boolean isRunning() {
-            return currentState == State.WARMUP ||
-                    currentState == State.MEASURING ||
-                    currentState == State.COOL_DOWN;
+        public State getCurrentState() {
+            return currentState;
         }
     }

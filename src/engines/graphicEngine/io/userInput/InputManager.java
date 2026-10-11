@@ -57,7 +57,7 @@ public class InputManager {
         if (isBPressedNow && !isBenchmarkTogglePreviously) {
             BenchmarkManager bm = graphicEngineContext.getBenchmarkManager();
 
-            if (!graphicEngineContext.isBenchmarkRunning()) {
+            if (graphicEngineContext.getBenchmarkRunningState() == BenchmarkManager.State.IDLE) {
                 bm.start();
             }
             else {

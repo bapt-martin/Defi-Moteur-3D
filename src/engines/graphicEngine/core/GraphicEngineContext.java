@@ -15,7 +15,7 @@ public class GraphicEngineContext {
     private volatile boolean isRunning;
 
     private boolean isHUDActive = true;
-    private boolean isBenchmarkRunning = false;
+    private BenchmarkManager.State benchmarkRunningState = BenchmarkManager.State.IDLE;
     private boolean isCameraSpotOn = false;
 
     private int windowWidth;
@@ -195,17 +195,14 @@ public class GraphicEngineContext {
         isHUDActive = HUDActive;
     }
 
-    public boolean isBenchmarkRunning() {
-        return isBenchmarkRunning;
-    }
-
-    public void setBenchmarkRunning(boolean benchmarkRunning) {
-        isBenchmarkRunning = benchmarkRunning;
-    }
-
     public boolean isCameraSpotOn() {
         return isCameraSpotOn;
     }
+
+    public BenchmarkManager.State getBenchmarkRunningState() {
+        return benchmarkManager.getCurrentState();
+    }
+
 
     public void setCameraSpotOn(boolean cameraSpotOn) {
         isCameraSpotOn = cameraSpotOn;
@@ -230,4 +227,7 @@ public class GraphicEngineContext {
     public void setWindowBorderPlanes(Plane[] windowBorderPlanes) {
         this.windowBorderPlanes = windowBorderPlanes;
     }
+
+
+
 }

@@ -138,12 +138,14 @@ public abstract class GameEngine implements Runnable {
             }
 
             if (needsRender) {
-                this.graphicEngine.render(this.camera, this.pipeline, this.hud);
-
                 this.benchmarkManager.update();
+
                 if (!graphicEngineContext.isRunning()) {
                     break;
                 }
+                this.graphicEngine.render(this.camera, this.pipeline, this.hud);
+
+
 
                 currentFPS++;
                 graphicEngineContext.incrementElapsedFrame();
