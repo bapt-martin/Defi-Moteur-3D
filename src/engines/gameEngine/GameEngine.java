@@ -117,15 +117,15 @@ public abstract class GameEngine implements Runnable {
 
         while (graphicEngineContext.isRunning()) {
             long currentTimeFrame = System.nanoTime();
-            double deltaFrameTime = (currentTimeFrame - previousTimeFrame) / 1_000_000_000.0;
-            graphicEngineContext.setDeltaFrameTime(deltaFrameTime);
+            double currentFrameDuration = (currentTimeFrame - previousTimeFrame) / 1_000_000_000.0;
+            graphicEngineContext.setCurrentFrameDuration(currentFrameDuration);
 
-            if (deltaFrameTime > 0.25) deltaFrameTime = 0.25;
+            if (currentFrameDuration > 0.25) currentFrameDuration = 0.25;
 
             double elapsedTime = (currentTimeFrame - startTime) / 1_000_000_000.0;
             graphicEngineContext.setElapsedTime(elapsedTime);
 
-            updateRequired += deltaFrameTime * graphicEngineContext.getUPS_TARGET();
+            updateRequired += currentFrameDuration * graphicEngineContext.getUPS_TARGET();
             previousTimeFrame = currentTimeFrame;
 
             boolean needsRender = false;

@@ -47,19 +47,21 @@ public class Pipeline {
     public PipelineProfilerRawData profilerRawData;
 
     public static class PipelineProfilerRawData {
-        public long[] telemetryPipelineValue = new long[2 + 2 + 16 * 2];
-
-        long[] currentGeometryFrameWorkerTimes = new long[16];
-        public final double[] geoThreadOccupancySum = new double[MAX_THREADS_CAPACITY];
-        public final int[] geoThreadFrameCount = new int[MAX_THREADS_CAPACITY];
-
-        long[] currentRasterFrameWorkerTimes = new long[16];
-        public final double[] rasterThreadOccupancySum = new double[MAX_THREADS_CAPACITY];
-        public final int[] rasterThreadFrameCount = new int[MAX_THREADS_CAPACITY];
-
-        // --- 1. OVERHEAD ---
-        // Chrono global de la méthode execution()
         public long totalPipelineExecutionTimeNs = 0;
+
+        public long geometryPassTotalDurationNs = 0;       // Ex [0] : Setup + Multithreading
+        public long geometryPassPureMathDurationNs = 0;    // Ex [1] : Juste le Multithreading
+        public long geometryPassMergeDurationNs = 0;
+
+        public long rasterizationPassTotalDurationNs = 0;  // Ex [18] : Setup + Multithreading
+        public long rasterizationPassPureMathDurationNs = 0; // Ex [19] : Juste le Multithreading
+
+        // =========================================================
+        // TIMINGS DES THREADS (Anciennement indices 2 à 17, et 20 à 35)
+        // =========================================================
+        public final long[] geometryThreadTimesNs = new long[MAX_THREADS_CAPACITY];
+        public final long[] rasterizationThreadTimesNs = new long[MAX_THREADS_CAPACITY];
+
 
         // --- 2. GÉOMÉTRIE (CULLING) ---
         // Somme de tous les triangles envoyés au pipeline sur le benchmark
@@ -72,13 +74,41 @@ public class Pipeline {
         public long totalRasterizedTriangles = 0;
 
         // --- 4. RASTÉRISATION (PIXELS) ---
-        // ⚠️ ATTENTION : Tableaux obligatoires pour éviter les conflits entre threads !
         public final long[] pixelsProcessedPerThread = new long[MAX_THREADS_CAPACITY];
         public final long[] zBufferRejectionsPerThread = new long[MAX_THREADS_CAPACITY];
 
         // --- 5. MÉMOIRE ---
-        // Accumulation de la RAM utilisée à chaque frame
         public long totalUsedMemoryBytesSum = 0;
+        public long previousFrameMemoryBytes = 0;
+        public long peakUsedMemoryBytes = 0;
+        public int garbageCollectorTriggerCount = 0;
+
+
+        public void resetTelemetry() {
+            this.totalPipelineExecutionTimeNs = 0;
+            this.geometryPassTotalDurationNs = 0;
+            this.geometryPassPureMathDurationNs = 0;
+            this.geometryPassMergeDurationNs = 0;
+
+            this.rasterizationPassTotalDurationNs = 0;
+            this.rasterizationPassPureMathDurationNs = 0;
+
+            this.totalSubmittedTriangles = 0;
+            this.totalSurvivingGeoTriangles = 0;
+            this.totalRasterizedTriangles = 0;
+
+            this.totalUsedMemoryBytesSum = 0;
+            this.peakUsedMemoryBytes = 0;
+            this.garbageCollectorTriggerCount = 0;
+            this.previousFrameMemoryBytes = 0;
+
+            for (int i = 0; i < 16; i++) {
+                this.geometryThreadTimesNs[i] = 0;
+                this.rasterizationThreadTimesNs[i] = 0;
+                this.pixelsProcessedPerThread[i] = 0;
+                this.zBufferRejectionsPerThread[i] = 0;
+            }
+        }
     }
 
     public static class Tile {
@@ -125,7 +155,7 @@ public class Pipeline {
                 this.processAllGeometryMultiThreaded();
         //        this.processAllGeometry();
             long endTime = System.nanoTime();
-            profilerRawData.telemetryPipelineValue[0] += (endTime - startTime);
+            profilerRawData.geometryPassTotalDurationNs += (endTime - startTime);
 
 
             startTime = System.nanoTime();
@@ -133,12 +163,22 @@ public class Pipeline {
         //        this.rasterizePassMultiThreaded(pixels);
         //        this.rasterizePass(pixels);
             endTime = System.nanoTime();
-            profilerRawData.telemetryPipelineValue[18] += (endTime - startTime);
+            profilerRawData.rasterizationPassTotalDurationNs += (endTime - startTime);
         long execEnd = System.nanoTime();
         profilerRawData.totalPipelineExecutionTimeNs += (execEnd - execStart);
 
         Runtime rt = Runtime.getRuntime();
-        profilerRawData.totalUsedMemoryBytesSum += (rt.totalMemory() - rt.freeMemory());
+        long currentRamBytes = rt.totalMemory() - rt.freeMemory();
+        profilerRawData.totalUsedMemoryBytesSum += currentRamBytes;
+
+        if (currentRamBytes > profilerRawData.peakUsedMemoryBytes) {
+            profilerRawData.peakUsedMemoryBytes = currentRamBytes;
+        }
+
+        if (profilerRawData.previousFrameMemoryBytes - currentRamBytes > 1_000_000) {
+            profilerRawData.garbageCollectorTriggerCount++;
+        }
+        profilerRawData.previousFrameMemoryBytes = currentRamBytes;
     }
 
     public void updateViewMatrix() {
@@ -229,7 +269,7 @@ public class Pipeline {
                             this.clipAndProjectMultiThreaded(projectionMatrix, frontClippingPlane, farClippingPlane, pooledTri, localProcessedTriBuffer, localClippedWorker);
                         }
                     long workerEndTime = System.nanoTime();
-                    currentFrameWorkerTimes[threadIndex] += (workerEndTime - workerStartTime);
+                    profilerRawData.geometryThreadTimesNs[threadIndex] += (workerEndTime - workerStartTime);
 
                     return localProcessedTriBuffer;
                 }));
@@ -256,34 +296,14 @@ public class Pipeline {
         // Fin totale de la passe
         long passEndTime = System.nanoTime();
 
-        // --- AFFICHAGE ---
-        double calcTimeMs = (endOfMathTime - passStartTime) / 1_000_000.0;
-        double mergeTimeMs = (passEndTime - endOfMathTime) / 1_000_000.0;
+        profilerRawData.geometryPassPureMathDurationNs += (passEndTime - passStartTime);
+        profilerRawData.geometryPassMergeDurationNs += (passEndTime - endOfMathTime);
 
-        System.out.printf("Temps pur de calcul (attente des %d Coeurs) : %.2f ms | Temps de fusion (addAll) : %.2f ms%n", numThreads, calcTimeMs, mergeTimeMs);
-
-        profilerRawData.telemetryPipelineValue[1] += (passEndTime - passStartTime);
-
-        computeInstantThreadOccupancy(passEndTime - passStartTime, currentFrameWorkerTimes, profilerRawData.geoThreadOccupancySum, profilerRawData.geoThreadFrameCount);
         // activeTriangleCount = Ce qui a été envoyé par la scène
         profilerRawData.totalSubmittedTriangles += this.activeTriangleCount;
 
 // geometryProcessedTri.size() = Ce qui a survécu au Backface/Frustum 3D
         profilerRawData.totalSurvivingGeoTriangles += this.postGeometryPassTriangles.size();
-    }
-
-    public void computeInstantThreadOccupancy(long passDurationNs, long[] currentFrameWorkerTimes,
-                                              double[] threadOccupancySum, int[] threadFrameCount) {
-        if (passDurationNs > 0) {
-            for (int i = 0; i < this.numThreads; i++) {
-                double frameOccupancy = ((double) currentFrameWorkerTimes[i] / passDurationNs) * 100.0;
-
-                if (frameOccupancy > 100.0) frameOccupancy = 100.0;
-
-                threadOccupancySum[i] += frameOccupancy;
-                threadFrameCount[i]++;
-            }
-        }
     }
 
     public void clipAndProjectMultiThreaded(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, Triangle triTransformed, List<Triangle> localResultBuffer, List<Triangle> localClippedWorker) {
@@ -439,20 +459,15 @@ public class Pipeline {
         }
 
         long passStartTime = System.nanoTime();
-
-        executeDynamicTiledRasterization(this.tilesPool, pixels, winWidth, depthBuffer);
-
+            executeDynamicTiledRasterization(this.tilesPool, pixels, winWidth, depthBuffer);
         long passEndTime = System.nanoTime();
-        profilerRawData.telemetryPipelineValue[19] += (passEndTime - passStartTime);
+        profilerRawData.rasterizationPassPureMathDurationNs += (passEndTime - passStartTime);
     }
 
     private void executeDynamicTiledRasterization(Tile[] tiles, int[] pixels, int winWidth, float[] depthBuffer) {
         List<Future<?>> futures = new ArrayList<>();
         AtomicInteger nextTileIndex = new java.util.concurrent.atomic.AtomicInteger(0);
 
-        long[] currentFrameWorkerTimes = new long[this.numThreads];
-        long passStartTime = System.nanoTime();
-        
         for (int i = 0; i < numThreads; i++) {
             final int threadIndex = i;
             futures.add(executor.submit(() -> {
@@ -469,12 +484,12 @@ public class Pipeline {
                             drawTexturedTriangleTiled(
                                     pixels, winWidth, depthBuffer,
                                     tile.minX, tile.maxX, tile.minY, tile.maxY,
-                                    triToDraw
+                                    triToDraw, threadIndex, profilerRawData
                             );
                         }
                     }
                 long workerEndTime = System.nanoTime();
-                profilerRawData.telemetryPipelineValue[threadIndex + 20] += (workerEndTime - workerStartTime);
+                profilerRawData.rasterizationThreadTimesNs[threadIndex] += (workerEndTime - workerStartTime);
             }));
         }
 
@@ -485,19 +500,6 @@ public class Pipeline {
                 e.printStackTrace();
             }
         }
-        long passEndTime = System.nanoTime();
-        profilerRawData.telemetryPipelineValue[19] += (passEndTime - passStartTime);
-        computeInstantThreadOccupancy(
-                passEndTime - passStartTime,
-                currentFrameWorkerTimes,
-                profilerRawData.rasterThreadOccupancySum,
-                profilerRawData.rasterThreadFrameCount
-        );
-
-        computeInstantThreadOccupancy(passEndTime - passStartTime,
-                currentFrameWorkerTimes,
-                profilerRawData.geoThreadOccupancySum,
-                profilerRawData.geoThreadFrameCount);
     }
 
     public void rasterizePassMultiThreaded(int[] pixels) {
@@ -639,39 +641,6 @@ public class Pipeline {
 
     public void setPreGeometryPassTriangles(Triangle[] preGeometryPassTriangles) {
         this.preGeometryPassTriangles = preGeometryPassTriangles;
-    }
-
-    public void printOccupancyTelemetry() {
-        System.out.println("====== PIPELINE TELEMETRY (OCCUPATION) ======");
-
-        long totalGeometryPassTime = profilerRawData.telemetryPipelineValue[1];
-        System.out.printf("Temps global parallélisé Géométrie : %.3f ms\n", totalGeometryPassTime / 1_000_000.0);
-
-        if (totalGeometryPassTime > 0) {
-            for (int i = 0; i < 16; i++) {
-                long threadTime = profilerRawData.telemetryPipelineValue[i + 2];
-                if (threadTime > 0) {
-                    double rate = ((double) threadTime / totalGeometryPassTime) * 100.0;
-                    System.out.printf("  -> Thread Géo %d : Taux d'occupation = %.2f%% (%.3f ms)\n",
-                            i, rate, threadTime / 1_000_000.0);
-                }
-            }
-        }
-
-        long totalRasterizationPassTime = profilerRawData.telemetryPipelineValue[19];
-        System.out.printf("Temps global parallélisé Rasterization : %.3f ms\n", totalRasterizationPassTime / 1_000_000.0);
-
-        if (totalRasterizationPassTime > 0) {
-            for (int i = 0; i < 16; i++) {
-                long threadTime = profilerRawData.telemetryPipelineValue[i + 20];
-                if (threadTime > 0) {
-                    double rate = ((double) threadTime / totalRasterizationPassTime) * 100.0;
-                    System.out.printf("  -> Thread Raster %d : Taux d'occupation = %.2f%% (%.3f ms)\n",
-                            i, rate, threadTime / 1_000_000.0);
-                }
-            }
-        }
-        System.out.println("=============================================");
     }
 
     public void setScene(Scene scene) {

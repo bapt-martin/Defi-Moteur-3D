@@ -54,7 +54,7 @@ public class HeadUpDisplay {
         }
         lastUiUpdate = now;
 
-        double deltaTime = graphicEngineContext.getDeltaFrameTime();
+        double deltaTime = graphicEngineContext.getCurrentFrameDuration();
 
         this.captureFrameMetrics();
 
@@ -82,7 +82,7 @@ public class HeadUpDisplay {
     }
 
     private void captureFrameMetrics() {
-        double deltaTime = graphicEngineContext.getDeltaFrameTime();
+        double deltaTime = graphicEngineContext.getCurrentFrameDuration();
         addToHistory(frameTimeHistory, deltaTime * 1000);
 
         int nbTri = graphicEngineContext.getCurrentFrameRenderedTriangleCount();

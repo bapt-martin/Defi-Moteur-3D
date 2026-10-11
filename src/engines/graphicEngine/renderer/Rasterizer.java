@@ -14,7 +14,10 @@ import java.util.List;
 public class Rasterizer {
     private Rasterizer() {}
 
-    public static void drawTexturedTriangleTiled(int[] pixels, int winWidth, float[] depthBuffer,int tileMinX, int tileMaxX, int tileMinY, int tileMaxY, Triangle triangle) {
+    public static void drawTexturedTriangleTiled(int[] pixels, int winWidth, float[] depthBuffer,
+                                                 int tileMinX, int tileMaxX,
+                                                 int tileMinY, int tileMaxY,
+                                                 Triangle triangle, int threadIndex, Pipeline.PipelineProfilerRawData profilerRawData) {
         Vertex3D[] verts = triangle.getVertices();
         Vertex2D[] uvs = triangle.getTextVertices();
         Color[] lights = triangle.getLightIntensities();
@@ -72,7 +75,15 @@ public class Rasterizer {
             float l_bb = isSecondHalf ? b2 + (b3 - b2) * beta : b1 + (b2 - b1) * beta;
 
 
-            drawTiledScanline(y, ax, bx, tex_au, tex_bu, tex_av, tex_bv, tex_aw, tex_bw, l_ar, l_ag, l_ab, l_br, l_bg, l_bb, triangle.getTexture(), pixels, winWidth, depthBuffer, tileMinX, tileMaxX);
+            drawTiledScanline(y, ax, bx,
+                    tex_au, tex_bu,
+                    tex_av, tex_bv,
+                    tex_aw, tex_bw,
+                    l_ar, l_ag, l_ab,
+                    l_br, l_bg, l_bb,
+                    triangle.getTexture(), pixels, winWidth, depthBuffer,
+                    tileMinX, tileMaxX,
+                    threadIndex, profilerRawData);
         }
     }
 
@@ -83,7 +94,8 @@ public class Rasterizer {
                                          float slr, float slg, float slb,
                                          float elr, float elg, float elb,
                                          Texture texture, int[] pixels, int winWidth, float[] depthBuffer,
-                                         int tileMinX, int tileMaxX) {
+                                         int tileMinX, int tileMaxX,
+                                         int threadIndex, Pipeline.PipelineProfilerRawData profilerRawData) {
 
         int winHeight = depthBuffer.length / winWidth;
         if (y < 0 || y >= winHeight) return;
@@ -128,6 +140,8 @@ public class Rasterizer {
         int index = y * winWidth + startX;
 
         for (int j = startX; j <= endX; j++) {
+            profilerRawData.pixelsProcessedPerThread[threadIndex]++;
+
             if (tex_w > depthBuffer[index]) {
                 float inverseW = 1 / tex_w;
                 int pixelColor = texture.getPixelRGB(tex_u * inverseW, tex_v * inverseW);
@@ -136,6 +150,8 @@ public class Rasterizer {
 //              System.out.println(index +" "+pixels.length);
                 pixels[index] = finalColor;
                 depthBuffer[index] = tex_w;
+            } else {
+                profilerRawData.zBufferRejectionsPerThread[threadIndex]++;
             }
             index++;
 

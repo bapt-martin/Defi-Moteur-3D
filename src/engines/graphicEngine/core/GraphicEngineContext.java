@@ -28,7 +28,7 @@ public class GraphicEngineContext {
     private int currentFrameRenderedTriangleCount;
     private long totalTriangleCount = 0;
 
-    private double deltaFrameTime;   //Instant Frame time?
+    private double currentFrameDuration;   //Instant Frame time?
     private double elapsedTime = 0; //Total time since the start
     private int elapsedFrame = 0;   //Total number of frames since the start
     private int currentFPS = 0;
@@ -45,7 +45,7 @@ public class GraphicEngineContext {
         this.windowHeight = windowHeight;
         this.windowPosition = new Vertex3D(0, 0, 0);
         this.currentFrameRenderedTriangleCount = 0;
-        this.deltaFrameTime = 0.1;
+        this.currentFrameDuration = 0.1;
     }
 
     public void updateWindowInformation() {
@@ -107,8 +107,8 @@ public class GraphicEngineContext {
         this.currentFrameRenderedTriangleCount = currentFrameRenderedTriangleCount;
     }
 
-    public double getDeltaFrameTime() {
-        return deltaFrameTime;
+    public double getCurrentFrameDuration() {
+        return currentFrameDuration;
     }
 
     public Vertex3D getWindowPosition() {
@@ -127,8 +127,8 @@ public class GraphicEngineContext {
         this.camera = camera;
     }
 
-    public void setDeltaFrameTime(double deltaFrameTime) {
-        this.deltaFrameTime = deltaFrameTime;
+    public void setCurrentFrameDuration(double currentFrameDuration) {
+        this.currentFrameDuration = currentFrameDuration;
     }
 
     public double getElapsedTime() {
