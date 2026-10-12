@@ -86,7 +86,7 @@ public class InputManager {
     }
 
     public void toggleCameraSpotlight() {
-        boolean isCameraSpotPressedNow = keyboardInput.getKeysPressed()[KeyEvent.VK_T];
+        boolean isCameraSpotPressedNow = keyboardInput.getKeysPressed()[KeyEvent.VK_L];
 
         if(isCameraSpotPressedNow && !isCameraSpotPressedPreviously) {
             boolean newState = !graphicEngineContext.isCameraSpotOn();

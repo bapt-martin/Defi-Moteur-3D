@@ -27,11 +27,8 @@
             FINISHED
         }
 
-
-        private double angleTheta = 0;
-        private double anglePhi = 0;
-
         private State currentState = State.IDLE;
+        private int startFrameOfCurrentState = 0;
 
         private final GraphicEngineContext graphicEngineContext;
         private final Pipeline pipeline;
@@ -39,11 +36,13 @@
         private Scene benchmarkScene;
         private Scene previousScene;
 
-        private int startFrameOfCurrentState = 0;
+        private double angleTheta = 0;
+        private double anglePhi = 0;
 
-        private final int WARMUP_FRAMES = 5;
-        private final int MEASURE_FRAMES = 5;
-        private final int COOLDOWN_FRAMES = 5;
+
+
+        private final int WARMUP_FRAMES = 15;
+        private final int MEASURE_FRAMES = 85;
 
         boolean telemetryResetDone = false;
 
@@ -80,12 +79,12 @@
             public float averageGeometryPassTotalDurationSec;
             public float averageGeometryPassPureMathDurationSec;
             public float averageGeometryPassMergeDurationSec;
-            public float geometryPassDurationRatio;
+            public float geometryPassDurationRatioPct;
 
             public float averageRasterizationPassTotalDurationSec;
             public float averageRasterizationPassPureMathDurationSec;
             public float averageRasterizationPassMergeDurationSec = 0.0f;
-            public float rasterizationPassDurationRatio;
+            public float rasterizationPassDurationRatioPct;
 
             // 4. GEOMETRY DATA
             public long totalBenchmarkedTrianglesCount = 0;
@@ -305,9 +304,7 @@
                         System.out.println("--- START OF MEASURE ---");
                         this.currentState = State.MEASURING;
 
-                        if (this.pipeline.profilerRawData != null) {
-                            this.pipeline.profilerRawData.resetTelemetry();
-                        }
+
 
                         metrics.totalBenchmarkedFrames = 0;
 
@@ -316,7 +313,9 @@
                         this.startFrameOfCurrentState = currentFrame;
 
                         if (!telemetryResetDone) {
-//                            this.resetTelemetry();
+                            if (this.pipeline.profilerRawData != null) {
+                                this.pipeline.profilerRawData.resetTelemetry();
+                            }
                             telemetryResetDone = true;
                         }
 
@@ -453,8 +452,8 @@
 
 
 //            Ratios
-            metrics.geometryPassDurationRatio = (metrics.averageGeometryPassTotalDurationSec /(metrics.averageGeometryPassTotalDurationSec + metrics.averageRasterizationPassTotalDurationSec)) * 100;
-            metrics.rasterizationPassDurationRatio = (metrics.averageRasterizationPassTotalDurationSec /(metrics.averageGeometryPassTotalDurationSec + metrics.averageRasterizationPassTotalDurationSec)) * 100;
+            metrics.geometryPassDurationRatioPct = (metrics.averageGeometryPassTotalDurationSec /(metrics.averageGeometryPassTotalDurationSec + metrics.averageRasterizationPassTotalDurationSec)) * 100;
+            metrics.rasterizationPassDurationRatioPct = (metrics.averageRasterizationPassTotalDurationSec /(metrics.averageGeometryPassTotalDurationSec + metrics.averageRasterizationPassTotalDurationSec)) * 100;
 
 
 //            4. GEOMETRY DATA
@@ -549,10 +548,10 @@
             System.out.println("--------------------------------------------------");
             System.out.println("[PIPELINE TIMINGS (Avg/Frame)]");
             System.out.printf("     |-- Pipeline Overhead  : %.3f ms (Setup & Clear)%n", metrics.averagePipelineOverheadDurationSec * 1000.0);
-            System.out.printf("     |-- Geometry Pass      : %s (%.2f ms)%n", createProgressBar(metrics.geometryPassDurationRatio), metrics.averageGeometryPassTotalDurationSec * 1000.0);
+            System.out.printf("     |-- Geometry Pass      : %s (%.2f ms)%n", createProgressBar(metrics.geometryPassDurationRatioPct), metrics.averageGeometryPassTotalDurationSec * 1000.0);
             System.out.printf("          |-- Pure Math     : %.3f ms%n", metrics.averageGeometryPassPureMathDurationSec * 1000.0);
             System.out.printf("          |-- Merge (addAll): %.3f ms%n", metrics.averageGeometryPassMergeDurationSec * 1000.0);
-            System.out.printf("     |-- Rasterization Pass : %s (%.2f ms)%n", createProgressBar(metrics.rasterizationPassDurationRatio), metrics.averageRasterizationPassTotalDurationSec * 1000.0);
+            System.out.printf("     |-- Rasterization Pass : %s (%.2f ms)%n", createProgressBar(metrics.rasterizationPassDurationRatioPct), metrics.averageRasterizationPassTotalDurationSec * 1000.0);
             System.out.printf("          |-- Pure Math     : %.3f ms%n", metrics.averageRasterizationPassPureMathDurationSec * 1000.0);
             System.out.printf("          |-- Merge (Array) : %.3f ms%n", metrics.averageRasterizationPassMergeDurationSec * 1000.0);
 
@@ -593,13 +592,19 @@
         }
     
         private void saveBenchmarkResultToCSV() {
-            String csvFileName = "performance_metrics_ver_8.csv";
-            File file = new File(csvFileName);
-            
+            String folderPath = "C:\\Users\\marti\\IdeaProjects\\Defi V5\\src\\engines\\graphicEngine\\io\\benchmarkResults\\";
+            String csvFileName = "performance_metrics_ver_9.csv";
+            File file = new File(folderPath + csvFileName);
+
+            if (file.getParentFile() != null) {
+                file.getParentFile().mkdirs();
+            }
+
             boolean exists = file.exists();
+
             try (FileWriter fw = new FileWriter(file, true);
                  PrintWriter pw = new PrintWriter(fw)) {
-    
+
                 if (!exists) {
                     StringBuilder header = new StringBuilder(
                             "Date,Commentary,Duration_s,Frames,Avg_FPS,1%_Low_FPS,1%_High_FPS," +
@@ -645,11 +650,11 @@
                         metrics.averageGeometryPassTotalDurationSec * 1000.0f,    // 12
                         metrics.averageGeometryPassPureMathDurationSec * 1000.0f, // 13
                         metrics.averageGeometryPassMergeDurationSec * 1000.0f,    // 14
-                        metrics.geometryPassDurationRatio,                        // 15
+                        metrics.geometryPassDurationRatioPct,                        // 15
                         metrics.averageRasterizationPassTotalDurationSec * 1000.0f, // 16
                         metrics.averageRasterizationPassPureMathDurationSec * 1000.0f, // 17
                         metrics.averageRasterizationPassMergeDurationSec * 1000.0f, // 18
-                        metrics.rasterizationPassDurationRatio,                   // 19
+                        metrics.rasterizationPassDurationRatioPct,                   // 19
                         metrics.totalBenchmarkedTrianglesCount,                   // 20
                         metrics.averageSubmittedTrianglesPerFrame,                // 21
                         metrics.averageCulledTrianglesPerFrame,                   // 22

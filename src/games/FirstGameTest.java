@@ -103,7 +103,7 @@ public class FirstGameTest extends GameEngine {
         if (graphicEngineContext.getBenchmarkRunningState() == BenchmarkManager.State.MEASURING) {
             this.graphicEngineContext.getBenchmarkManager().updateBenchmarkScene();
         } else {
-            camera.getCameraSpot().setOn(true);
+            camera.getCameraSpot().setOn(graphicEngineContext.isCameraSpotOn());
 
             angleTheta += 0.07;
             anglePhi += 0.01;

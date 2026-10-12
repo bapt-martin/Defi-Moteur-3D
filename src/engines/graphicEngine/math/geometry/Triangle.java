@@ -20,6 +20,9 @@ public class Triangle {
     private Color[] lightIntensities = new Color[3];
     private Color color;
 
+//    private int[] lightIntensities = new int[3];
+//    private int color;
+
     private Matrix parentWorldTransformMatrix;
     private Triangle parentTriangle = null;
 
