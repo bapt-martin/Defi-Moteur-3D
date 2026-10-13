@@ -2,6 +2,7 @@ package engines.graphicEngine.scene;
 
 import engines.graphicEngine.math.geometry.Mesh;
 import engines.graphicEngine.math.geometry.Triangle;
+import engines.graphicEngine.math.tools.ColorUtils;
 import engines.graphicEngine.math.tools.Matrix;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Texture;
@@ -13,7 +14,7 @@ public class GameObject {
     private Mesh mesh;
     private Triangle[] poolTriangle;
     private Texture texture = Texture.WHITE_PIXEL;
-    private Color basedColor = Color.WHITE;
+    private int basedColor = ColorUtils.BLUE;
     private Matrix worldTransformMatrix;
     private String name = "NaN";
     private int id;
@@ -22,7 +23,8 @@ public class GameObject {
     private Vector3D rotation;
     private Vector3D position;
 
-    private boolean isDirty = true;
+    private boolean isWorldTransformMatrixDirty = true;
+    private boolean isTrianglePoolColorDirty = false;
     private boolean isRendered = true;
 
     public GameObject(Mesh mesh) {
@@ -44,7 +46,7 @@ public class GameObject {
         this.createTrianglePool();
     }
 
-    public GameObject(Mesh mesh, Color color) {
+    public GameObject(Mesh mesh, int color) {
         this.mesh = mesh;
         this.basedColor = color;
         this.scale    = new Vector3D(1,1,1);
@@ -107,42 +109,42 @@ public class GameObject {
         this.scale.setX(x);
         this.scale.setY(y);
         this.scale.setZ(z);
-        this.isDirty = true;
+        this.isWorldTransformMatrixDirty = true;
     }
 
     public void setPosition(double x, double y, double z) {
         this.position.setX(x);
         this.position.setY(y);
         this.position.setZ(z);
-        this.isDirty = true;
+        this.isWorldTransformMatrixDirty = true;
     }
 
     public void setRotation(double x, double y, double z) {
         this.rotation.setX(x);
         this.rotation.setY(y);
         this.rotation.setZ(z);
-        this.isDirty = true;
+        this.isWorldTransformMatrixDirty = true;
     }
 
     public void move(double dx, double dy, double dz) {
         this.position.setX(this.position.getX() + dx);
         this.position.setY(this.position.getY() + dy);
         this.position.setZ(this.position.getZ() + dz);
-        this.isDirty = true;
+        this.isWorldTransformMatrixDirty = true;
     }
 
     public void rotate(double rx, double ry, double rz) {
         this.rotation.setX(this.rotation.getX() + rx);
         this.rotation.setY(this.rotation.getY() + ry);
         this.rotation.setZ(this.rotation.getZ() + rz);
-        this.isDirty = true;
+        this.isWorldTransformMatrixDirty = true;
     }
 
     public void scale(double sx, double sy, double sz) {
         this.scale.setX(this.scale.getX() * sx);
         this.scale.setY(this.scale.getY() * sy);
         this.scale.setZ(this.scale.getZ() * sz);
-        this.isDirty = true;
+        this.isWorldTransformMatrixDirty = true;
     }
 
     public Mesh getMesh() {
@@ -150,16 +152,16 @@ public class GameObject {
     }
 
     public Matrix getWorldTransformMatrix() {
-        if (isDirty) {
+        if (isWorldTransformMatrixDirty) {
             updateWorldTransformMatrix();
-            isDirty = false;
+            isWorldTransformMatrixDirty = false;
         }
         return worldTransformMatrix;
     }
 
     public void setWorldTransformMatrix(Matrix worldTransformMatrix) {
         this.worldTransformMatrix = worldTransformMatrix;
-        isDirty = false;
+        isWorldTransformMatrixDirty = false;
     }
 
     public String getName() {
@@ -194,12 +196,14 @@ public class GameObject {
         this.texture = texture;
     }
 
-    public Color getBasedColor() {
+    public int getBasedColor() {
+        System.out.println(basedColor);
         return basedColor;
     }
 
-    public void setBasedColor(Color basedColor) {
+    public void setBasedColor(int basedColor) {
         this.basedColor = basedColor;
+        isTrianglePoolColorDirty = true;
     }
 
     public Vector3D getScale() {
@@ -215,6 +219,15 @@ public class GameObject {
     }
 
     public Triangle[] getPoolTriangle() {
+        if (isTrianglePoolColorDirty) {
+            for (int i=0; i < poolTriangle.length; i++) {
+                poolTriangle[i].setColor(basedColor);
+                poolTriangle[i].getLightIntensities()[0] = basedColor;
+                poolTriangle[i].getLightIntensities()[1] = basedColor;
+                poolTriangle[i].getLightIntensities()[2] = basedColor;
+            }
+            isTrianglePoolColorDirty = false;
+        }
         return poolTriangle;
     }
 }

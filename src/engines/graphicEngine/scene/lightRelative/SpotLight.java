@@ -8,7 +8,7 @@ public class SpotLight extends PointLight {
     private Vector3D direction;
     private double cutOffAngle;
 
-    public SpotLight(Vector3D position, double fallOff, Color lightColor, Vector3D direction, double cutoffAngleDegrees) {
+    public SpotLight(Vector3D position, double fallOff, int lightColor, Vector3D direction, double cutoffAngleDegrees) {
         super(position, fallOff, lightColor);
 
         this.direction = direction;

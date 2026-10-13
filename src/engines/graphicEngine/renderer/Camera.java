@@ -2,6 +2,7 @@ package engines.graphicEngine.renderer;
 
 import engines.graphicEngine.core.GraphicEngineContext;
 import engines.graphicEngine.math.geometry.Plane;
+import engines.graphicEngine.math.tools.ColorUtils;
 import engines.graphicEngine.math.tools.Matrix;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.math.geometry.Vertex3D;
@@ -59,7 +60,7 @@ public class Camera {
         this.cameraSpot = new SpotLight(
                 new Vector3D(0, 0, 0),
                 0.005,
-                Color.WHITE,
+                ColorUtils.WHITE,
                 new Vector3D(0, 0, 1),
                 30
         );
@@ -69,7 +70,7 @@ public class Camera {
                   Plane cameraFrontClippingPlane, Plane cameraFarClippingPlane,
                   double near, double far, double fov,
                   GraphicEngineContext graphicEngineContext,
-                  double cameraSpotFalloff, Color cameraSpotColor, double cameraSpotCutoffAngle) {
+                  double cameraSpotFalloff, int cameraSpotColor, double cameraSpotCutoffAngle) {
 
         this(graphicEngineContext);
 
@@ -82,7 +83,7 @@ public class Camera {
     public void updateParameters(Vertex3D cameraPosition, CameraRotation cameraRotation, Vector3D cameraDirection, Vector3D cameraUp,
                                  Plane cameraFrontClippingPlane, Plane cameraFarClippingPlane,
                                  double near, double far, double fov,
-                                 double cameraSpotFalloff, Color cameraSpotColor, double cameraSpotCutoffAngle) {
+                                 double cameraSpotFalloff, int cameraSpotColor, double cameraSpotCutoffAngle) {
 
         this.cameraPosition.copyFrom(cameraPosition);
 

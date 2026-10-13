@@ -243,6 +243,7 @@ public class Pipeline {
 
                         for (int j = startIdx; j < endIdx; j++) {
                             Triangle pooledTri = this.preGeometryPassTriangles[j];
+//                            System.out.println();
 
                             Matrix worldTransformMatrix = pooledTri.getParentWorldTransformMatrix();
                             pooledTri.getParentTriangle().transformInPool(worldTransformMatrix, pooledTri);
@@ -328,7 +329,7 @@ public class Pipeline {
 
     public void processGameObject(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, GameObject gameObject) {
         Matrix worldTransformMatrix = gameObject.getWorldTransformMatrix();
-        Color baseColor = gameObject.getBasedColor();
+        int baseColor = gameObject.getBasedColor();
         Texture texture = gameObject.getTexture();
 
         Triangle[] gameObjectPoolTriangles = gameObject.getPoolTriangle();
@@ -340,7 +341,7 @@ public class Pipeline {
         }
     }
 
-    public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, Matrix worldTransformMatrix, Triangle triMeshClean, Triangle pooledTri, Texture texture,Color baseColor) { //Backface Culling
+    public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, Matrix worldTransformMatrix, Triangle triMeshClean, Triangle pooledTri, Texture texture, int baseColor) { //Backface Culling
 ////        pooledTri = triMeshClean.transformed(worldTransformMatrix, baseColor, texture);
 
         triMeshClean.transformInPool(worldTransformMatrix, pooledTri);

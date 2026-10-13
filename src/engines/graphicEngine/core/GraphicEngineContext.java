@@ -15,7 +15,6 @@ public class GraphicEngineContext {
     private volatile boolean isRunning;
 
     private boolean isHUDActive = true;
-    private BenchmarkManager.State benchmarkRunningState = BenchmarkManager.State.IDLE;
     private boolean isCameraSpotOn = false;
 
     private int windowWidth;

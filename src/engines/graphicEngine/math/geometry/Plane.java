@@ -1,5 +1,6 @@
 package engines.graphicEngine.math.geometry;
 
+import engines.graphicEngine.math.tools.ColorUtils;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Texture;
 
@@ -39,18 +40,18 @@ public class Plane {
         return new Vector3D(x, y, z).normalizeInPlace();
     }
 
-    private Color interpolateColor(Color c1, Color c2, double t) {//rasterizer
-        int r = (int) (t * (c2.getRed()   - c1.getRed()  ) + c1.getRed());
-        int g = (int) (t * (c2.getGreen() - c1.getGreen()) + c1.getGreen());
-        int b = (int) (t * (c2.getBlue()  - c1.getBlue() ) + c1.getBlue());
-        int a = (int) (t * (c2.getAlpha() - c1.getAlpha()) + c1.getAlpha());
+    private int interpolateColor(int c1, int c2, double t) {//rasterizer
+        int r = (int) (t * (ColorUtils.getRed(c2)   - ColorUtils.getRed(c1))   + ColorUtils.getRed(c1));
+        int g = (int) (t * (ColorUtils.getGreen(c2) - ColorUtils.getGreen(c1)) + ColorUtils.getGreen(c1));
+        int b = (int) (t * (ColorUtils.getBlue(c2)  - ColorUtils.getBlue(c1))  + ColorUtils.getBlue(c1));
+        int a = (int) (t * (ColorUtils.getAlpha(c2) - ColorUtils.getAlpha(c1)) + ColorUtils.getAlpha(c1));
 
         r = Math.max(0, Math.min(255, r));
         g = Math.max(0, Math.min(255, g));
         b = Math.max(0, Math.min(255, b));
         a = Math.max(0, Math.min(255, a));
 
-        return new Color(r, g, b, a);
+        return ColorUtils.getARGB(a, r, g, b);
     }
 
     public int clipTriangleAgainstPlane(Triangle triIn, List<Triangle> trisOut) {
@@ -74,12 +75,12 @@ public class Plane {
 
         Vertex2D[] textVertsIn = triIn.getTextVertices();
         Vector3D[] normalsVertsIn = triIn.getNormalsVertices();
-        Color[] colorVertsIn = triIn.getLightIntensities();
+        int[] colorVertsIn = triIn.getLightIntensities();
 
         Vertex3D[] ptsInside = new Vertex3D[3];    Vertex3D[] ptsOutside = new Vertex3D[3];
         Vertex2D[] textPtsInside = new Vertex2D[3]; Vertex2D[] textPtsOutside = new Vertex2D[3];
         Vector3D[] normalsPtsInside = new Vector3D[3]; Vector3D[] normalsPtsOutside = new Vector3D[3];
-        Color[] colorsPtsInside = new Color[3];    Color[] colorsPtsOutside = new Color[3];
+        int[] colorsPtsInside = new int[3];    int[] colorsPtsOutside = new int[3];
 
         // Vertex classification
         int insideCount = 0;
@@ -112,7 +113,7 @@ public class Plane {
             Vertex3D[] vertsOut1 = new Vertex3D[3];
             Vertex2D[] textVertsOut1 = new Vertex2D[3];
             Vector3D[] normalsVertsOut1 = new Vector3D[3];
-            Color[]    colorsVertsOut1 = new Color[3];
+            int[]    colorsVertsOut1 = new int[3];
 
             vertsOut1[0]        = ptsInside[0];
             textVertsOut1[0]    = textPtsInside[0];
@@ -142,12 +143,12 @@ public class Plane {
             Vertex3D[] vertsOut1 = new Vertex3D[3];
             Vertex2D[] textVertsOut1 = new Vertex2D[3];
             Vector3D[] normalsVertsOut1 = new Vector3D[3];
-            Color[]    colorsVertsOut1 = new Color[3];
+            int[]    colorsVertsOut1 = new int[3];
 
             Vertex3D[] vertsOut2 = new Vertex3D[3];
             Vertex2D[] textVertsOut2 = new Vertex2D[3];
             Vector3D[] normalsVertsOut2 = new Vector3D[3];
-            Color[]    colorsVertsOut2 = new Color[3];
+            int[]    colorsVertsOut2 = new int[3];
 
 
             vertsOut1[0]        = ptsInside[0];

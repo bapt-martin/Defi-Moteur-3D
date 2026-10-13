@@ -17,11 +17,11 @@ public class Triangle {
     private Vector3D[] normalsVertices = new Vector3D[3];
     private Vector3D normal = null;
 
-    private Color[] lightIntensities = new Color[3];
-    private Color color;
-
-//    private int[] lightIntensities = new int[3];
-//    private int color;
+//    private Color[] lightIntensities = new Color[3];
+//    private Color color;
+//
+    private int[] lightIntensities = new int[3];
+    private int color;
 
     private Matrix parentWorldTransformMatrix;
     private Triangle parentTriangle = null;
@@ -30,8 +30,8 @@ public class Triangle {
     private final int[] ys = new int[3];
 
 
-    public Triangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, Color[] lights, Color color, Texture texture) {
-        this.color = (color != null) ? color : Color.WHITE;
+    public Triangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, int[] lights, int color, Texture texture) {
+        this.color = color;
         this.texture = (texture != null) ? texture : Texture.WHITE_PIXEL;
 
         for (int i = 0; i < 3; i++) {
@@ -42,19 +42,23 @@ public class Triangle {
         }
     }
 
-    public static Triangle createShallowTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, Color[] lights, Color color, Texture texture) {
+    public Triangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, int[] lights, Texture texture) {
+        this(verts, textVerts, normals, lights, 0xFFFFFFFF, texture);
+    }
+
+    public static Triangle createShallowTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, int[] lights, int color, Texture texture) {
         return new Triangle(verts, textVerts, normals, lights, color, texture);
     }
 
-    public static Triangle createShallowTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, Color color) {
+    public static Triangle createShallowTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, int color) {
         return createShallowTriangle(verts, textVerts, normals, null, color, null);
     }
 
-    public static Triangle createDeepTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, Color[] lights, Color color, Texture texture) {
+    public static Triangle createDeepTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, int[] lights, int color, Texture texture) {
         Vertex3D[] newVerts = new Vertex3D[3];
         Vertex2D[] newUVs = new Vertex2D[3];
         Vector3D[] newNormals = new Vector3D[3];
-        Color[] newLights = new Color[3];
+        int[] newLights = new int[3];
 
         for (int i = 0; i < 3; i++) {
             newVerts[i] = new Vertex3D(verts[i].getX(), verts[i].getY(), verts[i].getZ());
@@ -65,15 +69,15 @@ public class Triangle {
         return new Triangle(newVerts, newUVs, newNormals, newLights, color, texture);
     }
 
-    public static Triangle createDeepTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, Color color) {
+    public static Triangle createDeepTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, int color) {
         return createDeepTriangle(verts, textVerts, normals, null, color, null);
     }
 
-    public static Triangle createDeepTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, Color color, Texture texture) {
+    public static Triangle createDeepTriangle(Vertex3D[] verts, Vertex2D[] textVerts, Vector3D[] normals, int color, Texture texture) {
         return createDeepTriangle(verts, textVerts, normals, null, color, texture);
     }
 
-    public static Triangle createDeepTriangle(Vertex3D[] verts, Vertex2D[] textVerts,  Color[] lights, Color color, Texture texture) {
+    public static Triangle createDeepTriangle(Vertex3D[] verts, Vertex2D[] textVerts,  int[] lights, int color, Texture texture) {
         return createDeepTriangle(verts, textVerts, null, lights, color, texture);
     }
 
@@ -92,7 +96,7 @@ public class Triangle {
         Vertex3D[] newVerts = new Vertex3D[3];
         Vertex2D[] newUVs = new Vertex2D[3];
         Vector3D[] newNormals = new Vector3D[3];
-        Color[] newLights = new Color[3];
+        int[] newLights = new int[3];
 
         for (int i = 0; i < 3; i++) {
             newVerts[i] = new Vertex3D(this.vertices[i].getX(), this.vertices[i].getY(), this.vertices[i].getZ());
@@ -184,7 +188,7 @@ public class Triangle {
         }
     }
 
-    public Triangle transformed(Matrix matTransform, Color color, Texture texture) {
+    public Triangle transformed(Matrix matTransform, int color, Texture texture) {
         Vertex3D[] vertsTriTransformed = new Vertex3D[3];
         Vertex2D[] textVerticesCopy = new Vertex2D[3];
         Vector3D[] normalsCopy = new Vector3D[3];
@@ -230,7 +234,7 @@ public class Triangle {
         return textVertices;
     }
 
-    public Color[] getLightIntensities() {
+    public int[] getLightIntensities() {
         return lightIntensities;
     }
 
@@ -238,16 +242,19 @@ public class Triangle {
         return normalsVertices;
     }
 
-    public void setLightIntensities(Color[] lightIntensities) {
+    public void setLightIntensities(int[] lightIntensities) {
         this.lightIntensities = lightIntensities;
     }
 
-    public Color getColor() {
+    public int getColor() {
         return color;
     }
 
-    public void setColor(Color color) {
+    public void setColor(int color) {
         this.color = color;
+//        this.lightIntensities[0] = color;
+//        this.lightIntensities[1] = color;
+//        this.lightIntensities[2] = color;
     }
 
     public Texture getTexture() {

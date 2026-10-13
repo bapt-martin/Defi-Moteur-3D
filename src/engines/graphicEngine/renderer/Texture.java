@@ -15,6 +15,7 @@ public class Texture {
     private int[] pixels;
 
     public static final Texture WHITE_PIXEL = createWhitePixel();
+    public static final Texture TF_PIXEL = createTfTexture();
 
     public Texture() {
         this.image = null;
@@ -62,6 +63,25 @@ public class Texture {
         int a = color.getAlpha();
 
         System.out.println("Pixel aux UV (" + u + ", " + v + ") -> R: " + r + " | G: " + g + " | B: " + b + " | A: " + a);
+    }
+
+    private static Texture createTfTexture() {
+        Texture t = new Texture();
+
+        t.textureName = "defaultEngineTexture";
+
+        t.image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+        t.image.setRGB(0, 0, 0xFF12FF32);
+
+        t.width = t.image.getWidth();
+        t.height = t.image.getHeight();
+        t.widthMinusOne = t.width - 1;
+        t.heightMinusOne = t.height - 1;
+        t.pixels = new int[t.width * t.height];
+
+        t.image.getRGB(0, 0, t.width, t.height, t.pixels, 0, t.width);
+
+        return t;
     }
 
     private static Texture createWhitePixel() {

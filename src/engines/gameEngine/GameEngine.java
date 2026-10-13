@@ -138,7 +138,7 @@ public abstract class GameEngine implements Runnable {
             }
 
             if (needsRender) {
-                this.benchmarkManager.update();
+                this.benchmarkManager.captureData();
 
                 if (!graphicEngineContext.isRunning()) {
                     break;
@@ -153,6 +153,7 @@ public abstract class GameEngine implements Runnable {
 
             if (System.currentTimeMillis() - timer > 1000) {
                 timer += 1000;
+                System.out.println(camera.getCameraPosition().toString());
                 graphicEngineContext.setCurrentUPS(currentUPS);
                 graphicEngineContext.setCurrentFPS(currentFPS);
                 currentUPS = 0;

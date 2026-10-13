@@ -6,6 +6,7 @@ import engines.graphicEngine.io.ObjLoader;
 import engines.graphicEngine.math.geometry.Mesh;
 import engines.graphicEngine.math.geometry.Plane;
 import engines.graphicEngine.math.geometry.Vertex3D;
+import engines.graphicEngine.math.tools.ColorUtils;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Texture;
@@ -26,14 +27,14 @@ public class FirstGameTest extends GameEngine {
 
     @Override
     public void initGame() {
-        this.camera.updateParameters(new Vertex3D(0, 0, 30),
-                new Camera.CameraRotation(0, 0, 0),
+        this.camera.updateParameters(new Vertex3D(10, 40, 0),
+                new Camera.CameraRotation(0, 90, 0),
                 new Vector3D(0, 0, 1),
                 new Vector3D(0, 1, 0),
                 new Plane(new Vertex3D(0, 0, 0.1f), new Vector3D(0, 0, 1)),
                 new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
                 0.1f,50,90,
-                0.005f, Color.WHITE, 15);
+                0.005f, ColorUtils.WHITE, 55);
 
         scene.addLight("cameraSpotLight", this.camera.getCameraSpot());
 
@@ -56,9 +57,6 @@ public class FirstGameTest extends GameEngine {
         this.scene.addMesh("texturedCube", texturedCube);
         this.scene.addMesh("texturedSphere", texturedSphere);
 
-//        System.out.println(this.scene.getMeshLibrary().get("texturedCube").getMeshTriangle().getFirst().getTextVertices()[0].toString());
-//        System.out.println(this.scene.getMeshLibrary().get("texturedCube").getMeshTriangle().getFirst().getVertices()[0].toString());
-
         Texture texturedCubeTexture = new Texture("obj model\\texture\\textureTest1.png");
         Texture photoTexture = new Texture("obj model\\texture\\photo.png");
         this.scene.addTexture("texturedCubeTexture",texturedCubeTexture);
@@ -67,8 +65,8 @@ public class FirstGameTest extends GameEngine {
 
         PointLight sun1 = new PointLight(
                 new Vector3D(10, 5, 0),
-                0.05f,
-                new Color(255, 180, 50)
+                0.0005f,
+                ColorUtils.getARGB(255, 255, 180, 50)
         );
         scene.addLight("sunLight1", sun1);
         scene.addGameObject("sun1", new GameObject(texturedSphere, texturedCubeTexture));
@@ -76,19 +74,16 @@ public class FirstGameTest extends GameEngine {
 
 
 
-        this.scene.addGameObject("axis1",   new GameObject(axis, Color.BLUE));
+        this.scene.addGameObject("axis1",   new GameObject(axis, ColorUtils.BLUE));
+        scene.getGameObject("axis1").setPosition(0, 0, 0);
+        scene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
 
 
         this.scene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
         scene.getGameObject("texturedCube").setRotation(45, 45, 45);;
 
 
-        scene.getGameObject("axis1").setPosition(0, 0, 0);
-        scene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
-
-
-        this.scene.addGameObject("teapot1", new GameObject(teapot, Color.WHITE));
-
+        this.scene.addGameObject("teapot1", new GameObject(teapot, ColorUtils.YELLOW));
         GameObject t1 = scene.getGameObject("teapot1");
         t1.setPosition(35, 0, 8);
 //        t1.setPosition(0, 0, 0);
@@ -118,9 +113,9 @@ public class FirstGameTest extends GameEngine {
             GameObject teapot = scene.getGameObject("teapot1");
             teapot.setPosition(x, y, z);
 
-            scene.getGameObject("sun1").setPosition(x, 5, z);
+            scene.getGameObject("sun1").setPosition(-z, -x, -y);
             scene.getLight("sunLight1").setOn(true);
-            scene.getLight("sunLight1").setLightColor(Color.RED);
+            scene.getLight("sunLight1").setLightColor(ColorUtils.RED);
             scene.linkLight("sun1", "sunLight1");
         }
     }

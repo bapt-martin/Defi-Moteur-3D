@@ -7,12 +7,15 @@ import java.awt.*;
 public class PointLight {
     private String name;
     private int id;
+
     private Vector3D position;
+
     private double fallOff;
-    private Color lightColor;
+    private int lightColor;
+
     private boolean isOn = true;
 
-    public PointLight(Vector3D position, double fallOff, Color lightColor) {
+    public PointLight(Vector3D position, double fallOff, int lightColor) {
         this.position = position;
         this.fallOff = fallOff;
         this.lightColor = lightColor;
@@ -46,11 +49,11 @@ public class PointLight {
         this.fallOff = fallOff;
     }
 
-    public Color getLightColor() {
+    public int getLightColor() {
         return lightColor;
     }
 
-    public void setLightColor(Color lightColor) {
+    public void setLightColor(int lightColor) {
         this.lightColor = lightColor;
     }
 

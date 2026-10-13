@@ -3,6 +3,7 @@ package engines.graphicEngine.renderer;
 import engines.graphicEngine.math.geometry.Triangle;
 import engines.graphicEngine.math.geometry.Vertex2D;
 import engines.graphicEngine.math.geometry.Vertex3D;
+import engines.graphicEngine.math.tools.ColorUtils;
 import engines.graphicEngine.math.tools.Matrix;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.scene.lightRelative.PointLight;
@@ -10,6 +11,8 @@ import engines.graphicEngine.scene.lightRelative.SpotLight;
 
 import java.awt.*;
 import java.util.List;
+
+import static engines.graphicEngine.math.tools.ColorUtils.*;
 
 public class Rasterizer {
     private Rasterizer() {}
@@ -20,16 +23,16 @@ public class Rasterizer {
                                                  Triangle triangle, int threadIndex, Pipeline.PipelineProfilerRawData profilerRawData) {
         Vertex3D[] verts = triangle.getVertices();
         Vertex2D[] uvs = triangle.getTextVertices();
-        Color[] lights = triangle.getLightIntensities();
+        int[] lights = triangle.getLightIntensities();
 
         int i0 = 0, i1 = 1, i2 = 2;
         if (verts[i0].y > verts[i1].y) { int temp = i0; i0 = i1; i1 = temp; }
         if (verts[i0].y > verts[i2].y) { int temp = i0; i0 = i2; i2 = temp; }
         if (verts[i1].y > verts[i2].y) { int temp = i1; i1 = i2; i2 = temp; }
 
-        int x1 = (int)verts[i0].x, y1 = (int)verts[i0].y; float u1 = (float)uvs[i0].u, v1 = (float)uvs[i0].v, w1 = (float)uvs[i0].w, r1 = (float)lights[i0].getRed(), g1 = (float)lights[i0].getGreen(), b1 = (float)lights[i0].getBlue();
-        int x2 = (int)verts[i1].x, y2 = (int)verts[i1].y; float u2 = (float)uvs[i1].u, v2 = (float)uvs[i1].v, w2 = (float)uvs[i1].w, r2 = (float)lights[i1].getRed(), g2 = (float)lights[i1].getGreen(), b2 = (float)lights[i1].getBlue();
-        int x3 = (int)verts[i2].x, y3 = (int)verts[i2].y; float u3 = (float)uvs[i2].u, v3 = (float)uvs[i2].v, w3 = (float)uvs[i2].w, r3 = (float)lights[i2].getRed(), g3 = (float)lights[i2].getGreen(), b3 = (float)lights[i2].getBlue();
+        int x1 = (int)verts[i0].x, y1 = (int)verts[i0].y; float u1 = (float)uvs[i0].u, v1 = (float)uvs[i0].v, w1 = (float)uvs[i0].w, r1 = (float)getRed(lights[i0]), g1 = (float)getGreen(lights[i0]), b1 = (float)getBlue(lights[i0]);
+        int x2 = (int)verts[i1].x, y2 = (int)verts[i1].y; float u2 = (float)uvs[i1].u, v2 = (float)uvs[i1].v, w2 = (float)uvs[i1].w, r2 = (float)getRed(lights[i1]), g2 = (float)getGreen(lights[i1]), b2 = (float)getBlue(lights[i1]);
+        int x3 = (int)verts[i2].x, y3 = (int)verts[i2].y; float u3 = (float)uvs[i2].u, v3 = (float)uvs[i2].v, w3 = (float)uvs[i2].w, r3 = (float)getRed(lights[i2]), g3 = (float)getGreen(lights[i2]), b3 = (float)getBlue(lights[i2]);
 
         int total_height = y3 - y1;
         if (total_height == 0) return;
@@ -148,6 +151,7 @@ public class Rasterizer {
                 int finalColor = multiplyColors(pixelColor, l_r, l_g, l_b);
 
 //              System.out.println(index +" "+pixels.length);
+
                 pixels[index] = finalColor;
                 depthBuffer[index] = tex_w;
             } else {
@@ -168,16 +172,16 @@ public class Rasterizer {
     public static void drawTexturedTriangleMultiThreaded(int[] pixels, int winWidth, float[] depthBuffer, int threadMinY, int threadMaxY, Triangle triangle) {
         Vertex3D[] verts = triangle.getVertices();
         Vertex2D[] uvs = triangle.getTextVertices();
-        Color[] lights = triangle.getLightIntensities();
+        int[] lights = triangle.getLightIntensities();
 
         int i0 = 0, i1 = 1, i2 = 2;
         if (verts[i0].y > verts[i1].y) { int temp = i0; i0 = i1; i1 = temp; }
         if (verts[i0].y > verts[i2].y) { int temp = i0; i0 = i2; i2 = temp; }
         if (verts[i1].y > verts[i2].y) { int temp = i1; i1 = i2; i2 = temp; }
 
-        int x1 = (int)verts[i0].x, y1 = (int)verts[i0].y; float u1 = (float)uvs[i0].u, v1 = (float)uvs[i0].v, w1 = (float)uvs[i0].w, r1 = (float)lights[i0].getRed(), g1 = (float)lights[i0].getGreen(), b1 = (float)lights[i0].getBlue();
-        int x2 = (int)verts[i1].x, y2 = (int)verts[i1].y; float u2 = (float)uvs[i1].u, v2 = (float)uvs[i1].v, w2 = (float)uvs[i1].w, r2 = (float)lights[i1].getRed(), g2 = (float)lights[i1].getGreen(), b2 = (float)lights[i1].getBlue();
-        int x3 = (int)verts[i2].x, y3 = (int)verts[i2].y; float u3 = (float)uvs[i2].u, v3 = (float)uvs[i2].v, w3 = (float)uvs[i2].w, r3 = (float)lights[i2].getRed(), g3 = (float)lights[i2].getGreen(), b3 = (float)lights[i2].getBlue();
+        int x1 = (int)verts[i0].x, y1 = (int)verts[i0].y; float u1 = (float)uvs[i0].u, v1 = (float)uvs[i0].v, w1 = (float)uvs[i0].w, r1 = (float)getRed(lights[i0]), g1 = (float)getGreen(lights[i0]), b1 = (float)getBlue(lights[i0]);
+        int x2 = (int)verts[i1].x, y2 = (int)verts[i1].y; float u2 = (float)uvs[i1].u, v2 = (float)uvs[i1].v, w2 = (float)uvs[i1].w, r2 = (float)getRed(lights[i1]), g2 = (float)getGreen(lights[i1]), b2 = (float)getBlue(lights[i1]);
+        int x3 = (int)verts[i2].x, y3 = (int)verts[i2].y; float u3 = (float)uvs[i2].u, v3 = (float)uvs[i2].v, w3 = (float)uvs[i2].w, r3 = (float)getRed(lights[i2]), g3 = (float)getGreen(lights[i2]), b3 = (float)getBlue(lights[i2]);
 
         int total_height = y3 - y1;
         if (total_height == 0) return;
@@ -229,16 +233,16 @@ public class Rasterizer {
     public static void drawTexturedTriangle(int[] pixels, int winWidth, float[] depthBuffer, Triangle triangle) {
         Vertex3D[] verts = triangle.getVertices();
         Vertex2D[] uvs = triangle.getTextVertices();
-        Color[] lights = triangle.getLightIntensities();
+        int[] lights = triangle.getLightIntensities();
 
         int i0 = 0, i1 = 1, i2 = 2;
         if (verts[i0].y > verts[i1].y) { int temp = i0; i0 = i1; i1 = temp; }
         if (verts[i0].y > verts[i2].y) { int temp = i0; i0 = i2; i2 = temp; }
         if (verts[i1].y > verts[i2].y) { int temp = i1; i1 = i2; i2 = temp; }
 
-        int x1 = (int)verts[i0].x, y1 = (int)verts[i0].y; float u1 = (float)uvs[i0].u, v1 = (float)uvs[i0].v, w1 = (float)uvs[i0].w, r1 = (float)lights[i0].getRed(), g1 = (float)lights[i0].getGreen(), b1 = (float)lights[i0].getBlue();
-        int x2 = (int)verts[i1].x, y2 = (int)verts[i1].y; float u2 = (float)uvs[i1].u, v2 = (float)uvs[i1].v, w2 = (float)uvs[i1].w, r2 = (float)lights[i1].getRed(), g2 = (float)lights[i1].getGreen(), b2 = (float)lights[i1].getBlue();
-        int x3 = (int)verts[i2].x, y3 = (int)verts[i2].y; float u3 = (float)uvs[i2].u, v3 = (float)uvs[i2].v, w3 = (float)uvs[i2].w, r3 = (float)lights[i2].getRed(), g3 = (float)lights[i2].getGreen(), b3 = (float)lights[i2].getBlue();
+        int x1 = (int)verts[i0].x, y1 = (int)verts[i0].y; float u1 = (float)uvs[i0].u, v1 = (float)uvs[i0].v, w1 = (float)uvs[i0].w, r1 = (float)getRed(lights[i0]), g1 = (float)getGreen(lights[i0]), b1 = (float)getBlue(lights[i0]);
+        int x2 = (int)verts[i1].x, y2 = (int)verts[i1].y; float u2 = (float)uvs[i1].u, v2 = (float)uvs[i1].v, w2 = (float)uvs[i1].w, r2 = (float)getRed(lights[i1]), g2 = (float)getGreen(lights[i1]), b2 = (float)getBlue(lights[i1]);
+        int x3 = (int)verts[i2].x, y3 = (int)verts[i2].y; float u3 = (float)uvs[i2].u, v3 = (float)uvs[i2].v, w3 = (float)uvs[i2].w, r3 = (float)getRed(lights[i2]), g3 = (float)getGreen(lights[i2]), b3 = (float)getBlue(lights[i2]);
 
         int total_height = y3 - y1;
         if (total_height == 0) return;
@@ -385,10 +389,10 @@ public class Rasterizer {
                     double attenuation = 1.0 / (1.0 + light.getFallOff() * distance);
                     double impact = dp * attenuation * spotIntensity;
 
-                    Color lightColor = light.getLightColor();
-                    double lightR = lightColor.getRed()   * 0.003921568627451;
-                    double lightG = lightColor.getGreen() * 0.003921568627451;
-                    double lightB = lightColor.getBlue()  * 0.003921568627451;
+                    int lightColor = light.getLightColor();
+                    double lightR = getRed(lightColor)   * 0.003921568627451;
+                    double lightG = getGreen(lightColor) * 0.003921568627451;
+                    double lightB = getBlue(lightColor)  * 0.003921568627451;
 
                     totalR += (impact * lightR);
                     totalG += (impact * lightG);
@@ -400,29 +404,12 @@ public class Rasterizer {
             totalG = Math.min(1.0, totalG);
             totalB = Math.min(1.0, totalB);
 
-            int finalRed   = (int) (triangle.getColor().getRed()   * totalR);
-            int finalGreen = (int) (triangle.getColor().getGreen() * totalG);
-            int finalBlue  = (int) (triangle.getColor().getBlue()  * totalB);
+            int finalRed   = (int) (getRed(triangle.getColor())   * totalR);
+            int finalGreen = (int) (getGreen(triangle.getColor()) * totalG);
+            int finalBlue  = (int) (getBlue (triangle.getColor()) * totalB);
 
-            triangle.getLightIntensities()[i] = new Color(finalRed, finalGreen, finalBlue);
+            triangle.getLightIntensities()[i] = ColorUtils.getARGB(255, finalRed, finalGreen, finalBlue);
         }
-    }
-
-    public static int multiplyColors(int texColor, float pixR, float pixG, float pixB) {
-        int a = (texColor >> 24) & 0xFF;
-        int r = (texColor >> 16) & 0xFF;
-        int g = (texColor >> 8) & 0xFF;
-        int b = texColor & 0xFF;
-
-        int lightR = (int) pixR;
-        int lightG = (int) pixG;
-        int lightB = (int) pixB;
-
-        r = (r * lightR) >> 8;
-        g = (g * lightG) >> 8;
-        b = (b * lightB) >> 8;
-
-        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
     public static boolean isFacing(Camera camera, boolean isFlipped, Triangle triangle) {

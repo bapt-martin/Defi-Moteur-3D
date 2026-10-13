@@ -4,6 +4,7 @@ import engines.graphicEngine.math.geometry.Mesh;
 import engines.graphicEngine.math.geometry.Triangle;
 import engines.graphicEngine.math.geometry.Vertex2D;
 import engines.graphicEngine.math.geometry.Vertex3D;
+import engines.graphicEngine.math.tools.ColorUtils;
 import engines.graphicEngine.math.tools.Vector3D;
 
 import java.awt.Color;
@@ -65,7 +66,7 @@ public abstract class ObjLoader {
                     triNormals[j] = new Vector3D(dis.readDouble(), dis.readDouble(), dis.readDouble());
                 }
 
-                Color color = new Color(dis.readInt());
+                int color = dis.readInt() | 0xFF000000;
 
                 meshTriangles.add(Triangle.createShallowTriangle(triVerts, textVerts, triNormals, color));
             }
@@ -94,7 +95,7 @@ public abstract class ObjLoader {
                 Vertex3D[] triVerts   = tri.getVertices();
                 Vertex2D[] textVerts  = tri.getTextVertices();
                 Vector3D[] triNormals = tri.getNormalsVertices();
-                Color color           = tri.getColor();
+                int color             = tri.getColor();
 
                 for (int i = 0; i < 3; i++) {
                     dos.writeDouble(triVerts[i].x);
@@ -109,7 +110,7 @@ public abstract class ObjLoader {
                     dos.writeDouble(triNormals[i].z);
                 }
 
-                dos.writeInt(color.getRGB());
+                dos.writeInt(color);
             }
 
             System.out.println("success saving" + triangles.size() + " triangles");
@@ -186,7 +187,7 @@ public abstract class ObjLoader {
                             triUVs[2] = new Vertex2D(0, 0);
                         }
 
-                        meshTriangles.add(Triangle.createShallowTriangle(triVerts, triUVs, triNormals, Color.WHITE));
+                        meshTriangles.add(Triangle.createShallowTriangle(triVerts, triUVs, triNormals, ColorUtils.WHITE));
                     }
                 }
             }

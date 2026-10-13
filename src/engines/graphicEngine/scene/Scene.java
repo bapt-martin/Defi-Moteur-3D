@@ -3,6 +3,7 @@ package engines.graphicEngine.scene;
 import engines.graphicEngine.math.geometry.Mesh;
 import engines.graphicEngine.math.geometry.Triangle;
 import engines.graphicEngine.math.tools.Matrix;
+import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Texture;
 import engines.graphicEngine.scene.lightRelative.PointLight;
 
@@ -14,6 +15,8 @@ import java.util.Map;
 
 public class Scene {
     public record ObjectData(String name, String meshName) {}
+
+    private Camera camera;
 
     private final Map<String, Mesh> meshLibrary;
     private final Map<String, Texture> textureLibrary;
@@ -145,5 +148,13 @@ public class Scene {
 
     public List<PointLight> getLightQueue() {
         return lightQueue;
+    }
+
+    public Camera getCamera() {
+        return camera;
+    }
+
+    public void setCamera(Camera camera) {
+        this.camera = camera;
     }
 }

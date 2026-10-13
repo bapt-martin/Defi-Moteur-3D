@@ -4,6 +4,7 @@
     import engines.graphicEngine.math.geometry.Mesh;
     import engines.graphicEngine.math.geometry.Plane;
     import engines.graphicEngine.math.geometry.Vertex3D;
+    import engines.graphicEngine.math.tools.ColorUtils;
     import engines.graphicEngine.math.tools.Vector3D;
     import engines.graphicEngine.renderer.Camera;
     import engines.graphicEngine.renderer.Pipeline;
@@ -11,8 +12,7 @@
     import engines.graphicEngine.scene.GameObject;
     import engines.graphicEngine.scene.Scene;
     import engines.graphicEngine.scene.lightRelative.PointLight;
-    
-    import java.awt.*;
+
     import java.io.*;
     import java.nio.file.Paths;
     import java.time.LocalDateTime;
@@ -33,8 +33,12 @@
         private final GraphicEngineContext graphicEngineContext;
         private final Pipeline pipeline;
         private BenchmarkMetrics metrics;
+
         private Scene benchmarkScene;
         private Scene previousScene;
+
+        private Camera benchmarkCamera;
+        private Camera previousCamera;
 
         private double angleTheta = 0;
         private double anglePhi = 0;
@@ -117,20 +121,22 @@
             this.pipeline = pipeline;
             this.metrics = new BenchmarkMetrics();
             this.metrics.framesDurationBuffer = new float[MEASURE_FRAMES];
-            this.initBenchmarkScene();
+//            this.benchmarkCamera = new Camera(graphicEngineContext);
+            this.initBenchmarkScene1();
         }
     
-        public void initBenchmarkScene() {
+        public void initBenchmarkScene1() {
             this.benchmarkScene = new Scene();
-            this.graphicEngineContext.getCamera().updateParameters(new Vertex3D(0, 0, 30),
-                    new Camera.CameraRotation(0, 0, 0),
-                    new Vector3D(0, 0, 1),
-                    new Vector3D(0, 1, 0),
-                    new Plane(new Vertex3D(0, 0, 0.1f), new Vector3D(0, 0, 1)),
-                    new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
-                    0.1f,50,90,
-                    0.005f, Color.WHITE, 15);
-    
+//            this.benchmarkCamera.updateParameters(new Vertex3D(-20, 0, 30),
+//                    new Camera.CameraRotation(0, 0, 0),
+//                    new Vector3D(0, 0, 1),
+//                    new Vector3D(0, 1, 0),
+//                    new Plane(new Vertex3D(0, 0, 0.1f), new Vector3D(0, 0, 1)),
+//                    new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
+//                    0.1f,50,90,
+//                    0.005f, ColorUtils.WHITE, 15);
+
+            System.out.println(graphicEngineContext.getCamera().getCameraPosition().toString());
             benchmarkScene.addLight("cameraSpotLight", this.graphicEngineContext.getCamera().getCameraSpot());
     
             //Mesh loading
@@ -153,16 +159,17 @@
             Texture photoTexture = new Texture("obj model\\texture\\photo.png");
             this.benchmarkScene.addTexture("texturedCubeTexture",texturedCubeTexture);
             this.benchmarkScene.addTexture("photoTexture",photoTexture);
-    
+
     
             for (int i = 0; i < 30; i++) {
-                this.benchmarkScene.addGameObject("teapot" + i, new GameObject(teapot, Color.WHITE));
+                this.benchmarkScene.addGameObject("teapot" + i, new GameObject(teapot, ColorUtils.WHITE));
             }
     
             PointLight sun1 = new PointLight(
                     new Vector3D(10, 5, 0),
                     0.05f,
-                    new Color(255, 180, 50)
+//                    ColorUtils.getARGB(255,255, 180, 50)
+                    ColorUtils.getARGB(255, 255, 255, 255)
             );
             benchmarkScene.addLight("sunLight1", sun1);
             benchmarkScene.addGameObject("sun1", new GameObject(texturedSphere, texturedCubeTexture));
@@ -171,39 +178,114 @@
             PointLight sun2 = new PointLight(
                     new Vector3D(-10, 5, 0),
                     0.05f,
-                    new Color(255, 180, 50)
+//                    ColorUtils.getARGB(255, 255, 180, 50)
+                    ColorUtils.getARGB(255, 255, 255, 255)
             );
             benchmarkScene.addLight("sunLight2", sun2);
             benchmarkScene.addGameObject("sun2", new GameObject(texturedSphere, texturedCubeTexture));
             benchmarkScene.getGameObject("sun2").setPosition(-10, 5, 10);
     
-            benchmarkScene.addGameObject("axis1",   new GameObject(axis, Color.BLUE));
+            benchmarkScene.addGameObject("axis1",   new GameObject(axis, ColorUtils.BLUE));
     
     
             benchmarkScene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
-            benchmarkScene.addGameObject("wall", new GameObject(texturedCube,photoTexture));
-    
-    
-            benchmarkScene.getGameObject("wall").setRotation(0, 180, 0);;
-            benchmarkScene.getGameObject("wall").setPosition(-25, 0, 0);
-            benchmarkScene.getGameObject("wall").setScale(10, 10, 10);
-    
-    
             benchmarkScene.getGameObject("texturedCube").setRotation(45, 45, 45);;
-    
+
     
             benchmarkScene.getGameObject("axis1").setPosition(0, 0, 0);
             benchmarkScene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
-    
+        }
+
+        public void initBenchmarkScene2() {
+            this.benchmarkScene = new Scene();
+            this.graphicEngineContext.getCamera().updateParameters(new Vertex3D(0, 0, 30),
+                    new Camera.CameraRotation(0, 0, 0),
+                    new Vector3D(0, 0, 1),
+                    new Vector3D(0, 1, 0),
+                    new Plane(new Vertex3D(0, 0, 0.1f), new Vector3D(0, 0, 1)),
+                    new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
+                    0.1f,50,90,
+                    0.005f, ColorUtils.WHITE, 15);
+
+            benchmarkScene.addLight("cameraSpotLight", this.graphicEngineContext.getCamera().getCameraSpot());
+
+            //Mesh loading
+            Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
+            Mesh axis            = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\axis.obj"));
+            Mesh centeredCube    = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube.obj"));
+            Mesh outCenteredCube = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube pas centré.obj"));
+            Mesh texturedCube    = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\cubeTexture.obj"));
+            Mesh texturedSphere  = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
+
+            this.benchmarkScene.addMesh("teapot", teapot);
+            this.benchmarkScene.addMesh("axis", axis);
+            this.benchmarkScene.addMesh("centeredCube", centeredCube);
+            this.benchmarkScene.addMesh("outCenteredCube", outCenteredCube);
+            this.benchmarkScene.addMesh("texturedCube", texturedCube);
+            this.benchmarkScene.addMesh("texturedSphere", texturedSphere);
+
+
+            Texture texturedCubeTexture = new Texture("obj model\\texture\\textureTest1.png");
+            Texture photoTexture = new Texture("obj model\\texture\\photo.png");
+            this.benchmarkScene.addTexture("texturedCubeTexture",texturedCubeTexture);
+            this.benchmarkScene.addTexture("photoTexture",photoTexture);
+
+
+            for (int i = 0; i < 30; i++) {
+                float hue = i / 30.0f;
+                int colorInt = ColorUtils.hsbToARGB(hue, 1.0f, 1.0f);
+
+                this.benchmarkScene.addGameObject("teapot" + i, new GameObject(teapot, colorInt));
+            }
+
+            PointLight sun1 = new PointLight(
+                    new Vector3D(10, 5, 0),
+                    0.05f,
+//                    ColorUtils.getARGB(255,255, 180, 50)
+                    ColorUtils.getARGB(255,255, 255, 255)
+            );
+            benchmarkScene.addLight("sunLight1", sun1);
+            benchmarkScene.addGameObject("sun1", new GameObject(texturedSphere, texturedCubeTexture));
+            benchmarkScene.getGameObject("sun1").setPosition(10, 5, 10);
+
+            PointLight sun2 = new PointLight(
+                    new Vector3D(-10, 5, 0),
+                    0.05f,
+//                    ColorUtils.getARGB(255, 255, 180, 50)
+                    ColorUtils.getARGB(255,255, 255, 255)
+            );
+
+            benchmarkScene.addLight("sunLight2", sun2);
+            benchmarkScene.addGameObject("sun2", new GameObject(texturedSphere, texturedCubeTexture));
+            benchmarkScene.getGameObject("sun2").setPosition(-10, 5, 10);
+
+            benchmarkScene.addGameObject("axis1",   new GameObject(axis, ColorUtils.BLUE));
+
+
+            benchmarkScene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
+            benchmarkScene.addGameObject("wall", new GameObject(texturedCube,photoTexture));
+
+
+            benchmarkScene.getGameObject("wall").setRotation(0, 180, 0);;
+            benchmarkScene.getGameObject("wall").setPosition(-25, 0, 0);
+            benchmarkScene.getGameObject("wall").setScale(10, 10, 10);
+
+
+            benchmarkScene.getGameObject("texturedCube").setRotation(45, 45, 45);;
+
+
+            benchmarkScene.getGameObject("axis1").setPosition(0, 0, 0);
+            benchmarkScene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
+
             GameObject t1 = benchmarkScene.getGameObject("teapot1");
             t1.setPosition(35, 0, 8);
             t1.setRotation(0, 0, 0);
             t1.setScale(10, 10, 10);
         }
-    
+
         public void updateBenchmarkScene() {
             this.graphicEngineContext.getCamera().getCameraSpot().setOn(true);
-    
+
             angleTheta += 0.07;
             anglePhi += 0.01;
     
@@ -219,7 +301,7 @@
             float sZ = (float) (1.0 + (0.5 * Math.cos(anglePhi)));
     
             int totalTeapots = 30;
-            for (int i = 2; i <= totalTeapots + 1; i++) {
+            for (int i = 0; i < totalTeapots; i++) {
                 GameObject teapot = benchmarkScene.getGameObject("teapot" + i);
                 if (teapot == null) continue;
     
@@ -231,30 +313,37 @@
                 x = (float) (r * Math.cos(individualTheta));
                 y = (float) (hR * Math.sin(individualPhi));
                 z = (float) (r * Math.sin(individualTheta));
-                teapot.setPosition(x, y, z);
+                teapot.setPosition(x+10, y+10, z+10);
     
-                sX = (float) (1.0 + (3 * Math.sin(individualPhi)));
-                sY = (float) (1.0 + (3 * Math.sin(individualTheta)));
-                sZ = (float) (1.0 + (3 * Math.cos(individualPhi)));
-                teapot.setScale(sX, sY, sZ);
-    
+
                 float rx = (float) (individualTheta);
                 float ry = (float) (individualTheta * (i % 2 == 0 ? 1 : -1));
                 float rz = (float) (individualPhi);
                 teapot.rotate(rx, ry, rz);
+
+                sX = (float) (1.0 + (3 * Math.sin(individualPhi)));
+                sY = (float) (1.0 + (3 * Math.sin(individualTheta)));
+                sZ = (float) (1.0 + (3 * Math.cos(individualPhi)));
+                teapot.setScale(sX, sY, sZ);
+
+                float hue = (float) ((individualTheta / (2 * Math.PI)) % 1.0);
+                if (hue < 0) hue += 1.0f;
+                int colorInt = ColorUtils.hsbToARGB(hue, 1.0f, 1.0f);
+                teapot.setBasedColor(colorInt);
             }
-    
-            benchmarkScene.getGameObject("texturedCube").setScale(sX, sY, sZ);
+
+
+            benchmarkScene.getGameObject("texturedCube").setPosition(y, z, x);
             benchmarkScene.getGameObject("texturedCube").rotate(0.5f, 1, 1.5f);
-            benchmarkScene.getGameObject("texturedCube").setPosition(x, y, z);
-    
-            benchmarkScene.getGameObject("sun1").setPosition(x, 5, z);
-            benchmarkScene.getGameObject("sun2").setPosition(-x, 5, z);
+            benchmarkScene.getGameObject("texturedCube").setScale(sY, sZ, sX);
+
+            benchmarkScene.getGameObject("sun1").setPosition(z, x, y);
+            benchmarkScene.getGameObject("sun2").setPosition(-z, -x, -y);
     
             benchmarkScene.getLight("sunLight1").setOn(true);
-            benchmarkScene.getLight("sunLight1").setLightColor(Color.GREEN);
+//            benchmarkScene.getLight("sunLight1").setLightColor(ColorUtils.GREEN);
             benchmarkScene.getLight("sunLight2").setOn(true);
-            benchmarkScene.getLight("sunLight2").setLightColor(Color.BLUE);
+//            benchmarkScene.getLight("sunLight2").setLightColor(ColorUtils.BLUE);
     
             benchmarkScene.linkLight("sun1", "sunLight1");
             benchmarkScene.linkLight("sun2", "sunLight2");
@@ -268,6 +357,9 @@
 
             this.previousScene = this.pipeline.getScene();
             this.pipeline.setScene(benchmarkScene);
+
+//            this.previousCamera = this.graphicEngineContext.getCamera();
+//            this.graphicEngineContext.setCamera(this.benchmarkCamera);
 
             this.startFrameOfCurrentState = graphicEngineContext.getElapsedFrame();
 
@@ -289,7 +381,7 @@
             this.currentState = State.IDLE;
         }
     
-        public void update() {
+        public void captureData() {
             if (currentState == State.IDLE || currentState == State.FINISHED) return;
 
             int currentFrame = graphicEngineContext.getElapsedFrame();
@@ -370,20 +462,28 @@
             this.currentState = State.FINISHED;
 
             this.pipeline.setScene(previousScene);
+//            this.graphicEngineContext.setCamera(this.benchmarkCamera);
             telemetryResetDone = false;
 
             metrics.windowHeight = graphicEngineContext.getWindowHeight();
             metrics.windowWidth = graphicEngineContext.getWindowWidth();
 
             java.awt.Window parentWindow = javax.swing.SwingUtilities.getWindowAncestor(this.graphicEngineContext.getGraphicEngine());
-            if (parentWindow != null) {
-                parentWindow.dispose();
-            }
-            this.graphicEngineContext.setRunning(false);
+            javax.swing.JFrame frame = null;
 
+            if (parentWindow instanceof javax.swing.JFrame) {
+                frame = (javax.swing.JFrame) parentWindow;
+                frame.setExtendedState(javax.swing.JFrame.ICONIFIED);
+            }
             computeBenchmarkResults();
             printBenchmarkResult();
             saveBenchmarkResultToCSV();
+
+            if (frame != null) {
+                frame.setExtendedState(javax.swing.JFrame.NORMAL);
+                frame.toFront();
+                frame.requestFocus();
+            }
         }
 
         private void computeBenchmarkResults() {
