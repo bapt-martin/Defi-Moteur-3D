@@ -118,6 +118,7 @@
 
         public BenchmarkManager(GraphicEngineContext graphicEngineContext, Pipeline pipeline) {
             this.graphicEngineContext = graphicEngineContext;
+            this.graphicEngineContext.setBenchmarkManager(this);
             this.pipeline = pipeline;
             this.metrics = new BenchmarkMetrics();
             this.metrics.framesDurationBuffer = new float[MEASURE_FRAMES];
@@ -126,7 +127,7 @@
         }
     
         public void initBenchmarkScene1() {
-            this.benchmarkScene = new Scene();
+            this.benchmarkScene = new Scene(graphicEngineContext);
 //            this.benchmarkCamera.updateParameters(new Vertex3D(-20, 0, 30),
 //                    new Camera.CameraRotation(0, 0, 0),
 //                    new Vector3D(0, 0, 1),
@@ -136,8 +137,8 @@
 //                    0.1f,50,90,
 //                    0.005f, ColorUtils.WHITE, 15);
 
-            System.out.println(graphicEngineContext.getCamera().getCameraPosition().toString());
-            benchmarkScene.addLight("cameraSpotLight", this.graphicEngineContext.getCamera().getCameraSpot());
+//            System.out.println(graphicEngineContext.getCurrentScene().getMainCamera().getCameraPosition().toString());
+//            benchmarkScene.addLight("cameraSpotLight", this.graphicEngineContext.getCurrentScene().getMainCamera().getCameraSpot());
     
             //Mesh loading
             Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
@@ -197,8 +198,8 @@
         }
 
         public void initBenchmarkScene2() {
-            this.benchmarkScene = new Scene();
-            this.graphicEngineContext.getCamera().updateParameters(new Vertex3D(0, 0, 30),
+            this.benchmarkScene = new Scene(graphicEngineContext);
+            this.benchmarkScene.getMainCamera().updateParameters(new Vertex3D(0, 0, 30),
                     new Camera.CameraRotation(0, 0, 0),
                     new Vector3D(0, 0, 1),
                     new Vector3D(0, 1, 0),
@@ -207,7 +208,7 @@
                     0.1f,50,90,
                     0.005f, ColorUtils.WHITE, 15);
 
-            benchmarkScene.addLight("cameraSpotLight", this.graphicEngineContext.getCamera().getCameraSpot());
+            benchmarkScene.addLight("cameraSpotLight", this.benchmarkScene.getMainCamera().getCameraSpot());
 
             //Mesh loading
             Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
@@ -284,7 +285,7 @@
         }
 
         public void updateBenchmarkScene() {
-            this.graphicEngineContext.getCamera().getCameraSpot().setOn(true);
+            this.benchmarkScene.getMainCamera().getCameraSpot().setOn(true);
 
             angleTheta += 0.07;
             anglePhi += 0.01;
@@ -355,8 +356,8 @@
             System.out.println("--- BENCHMARK STARTED ---");
             System.out.println("--- WARM UP ---");
 
-            this.previousScene = this.pipeline.getScene();
-            this.pipeline.setScene(benchmarkScene);
+            this.previousScene = this.graphicEngineContext.getCurrentScene();
+            this.graphicEngineContext.setCurrentScene(benchmarkScene);
 
 //            this.previousCamera = this.graphicEngineContext.getCamera();
 //            this.graphicEngineContext.setCamera(this.benchmarkCamera);
@@ -461,7 +462,7 @@
             System.out.println("--- END OF BENCHMARK ---");
             this.currentState = State.FINISHED;
 
-            this.pipeline.setScene(previousScene);
+            this.graphicEngineContext.setCurrentScene(previousScene);
 //            this.graphicEngineContext.setCamera(this.benchmarkCamera);
             telemetryResetDone = false;
 

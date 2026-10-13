@@ -1,9 +1,11 @@
 package engines.graphicEngine.core;
 
+import engines.graphicEngine.io.userInput.InputManager;
 import engines.graphicEngine.math.geometry.Plane;
 import engines.graphicEngine.math.geometry.Vertex3D;
 import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Camera;
+import engines.graphicEngine.scene.Scene;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,6 +13,10 @@ import java.awt.*;
 public class GraphicEngineContext {
     private final GraphicEngine graphicEngine;
     private BenchmarkManager benchmarkManager;
+
+    private Scene currentScene;
+
+    private InputManager inputManager;
 
     private volatile boolean isRunning;
 
@@ -36,8 +42,6 @@ public class GraphicEngineContext {
     private final int UPS_TARGET = 60;
     private final int FPS_TARGET = 60;
 
-    private Camera camera;
-
     public GraphicEngineContext(GraphicEngine graphicEngine, int windowWidth, int windowHeight) {
         this.graphicEngine = graphicEngine;
         this.windowWidth = windowWidth;
@@ -62,7 +66,7 @@ public class GraphicEngineContext {
             SwingUtilities.convertPointToScreen(centerPoint, graphicEngine);
 
             this.canvasCenter = new Vertex3D(centerPoint.x, centerPoint.y, 0);
-            camera.updateProjectionMatrix();
+            currentScene.getMainCamera().updateProjectionMatrix();
         }
 
         this.windowBorderPlanes = new Plane[] {
@@ -118,13 +122,6 @@ public class GraphicEngineContext {
         return graphicEngine;
     }
 
-    public Camera getCamera() {
-        return camera;
-    }
-
-    public void setCamera(Camera camera) {
-        this.camera = camera;
-    }
 
     public void setCurrentFrameDuration(double currentFrameDuration) {
         this.currentFrameDuration = currentFrameDuration;
@@ -227,6 +224,19 @@ public class GraphicEngineContext {
         this.windowBorderPlanes = windowBorderPlanes;
     }
 
+    public Scene getCurrentScene() {
+        return currentScene;
+    }
 
+    public void setCurrentScene(Scene currentScene) {
+        this.currentScene = currentScene;
+    }
 
+    public InputManager getInputManager() {
+        return inputManager;
+    }
+
+    public void setInputManager(InputManager inputManager) {
+        this.inputManager = inputManager;
+    }
 }

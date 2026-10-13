@@ -11,23 +11,25 @@ import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Texture;
 import engines.graphicEngine.scene.GameObject;
+import engines.graphicEngine.scene.Scene;
 import engines.graphicEngine.scene.lightRelative.PointLight;
 
-import java.awt.*;
 import java.nio.file.Paths;
 
 
-public class FirstGameTest extends GameEngine {
+public class FirstGame extends GameEngine {
     private double angleTheta = 0;
     private double anglePhi = 0;
 
-    public FirstGameTest(int width, int height) {
+    public FirstGame(int width, int height) {
         super(width, height);
     }
 
     @Override
     public void initGame() {
-        this.camera.updateParameters(new Vertex3D(10, 40, 0),
+//        Scene scene =  this.graphicEngineContext.getCurrentScene();
+        Scene scene = new Scene(graphicEngineContext);
+        scene.getMainCamera().updateParameters(new Vertex3D(10, 40, 0),
                 new Camera.CameraRotation(0, 90, 0),
                 new Vector3D(0, 0, 1),
                 new Vector3D(0, 1, 0),
@@ -35,8 +37,7 @@ public class FirstGameTest extends GameEngine {
                 new Plane(new Vertex3D(0, 0, 100), new Vector3D(0, 0, -1)),
                 0.1f,50,90,
                 0.005f, ColorUtils.WHITE, 55);
-
-        scene.addLight("cameraSpotLight", this.camera.getCameraSpot());
+//        this.addLight("cameraSpotLight", mainCamera.getCameraSpot());
 
         long start = System.nanoTime();
             Mesh teapot          = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\teapot.obj"));
@@ -45,22 +46,21 @@ public class FirstGameTest extends GameEngine {
             Mesh outCenteredCube = ObjLoader.loadMesh(Paths.get("obj model\\objTextureLess\\cube pas centré.obj"));
             Mesh texturedCube    = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\cubeTexture.obj"));
             Mesh texturedSphere  = ObjLoader.loadMesh(Paths.get("obj model\\objWithTexture\\sphereTexture.obj"));
-    //        new Scene.MeshData("F1","obj model\\F1.obj")
         long end = System.nanoTime();
         System.out.printf("             |-- mesh loaded in %.2f ms%n", (end - start) / 1_000_000.0);
 
 
-        this.scene.addMesh("teapot", teapot);
-        this.scene.addMesh("axis", axis);
-        this.scene.addMesh("centeredCube", centeredCube);
-        this.scene.addMesh("outCenteredCube", outCenteredCube);
-        this.scene.addMesh("texturedCube", texturedCube);
-        this.scene.addMesh("texturedSphere", texturedSphere);
+        scene.addMesh("teapot", teapot);
+        scene.addMesh("axis", axis);
+        scene.addMesh("centeredCube", centeredCube);
+        scene.addMesh("outCenteredCube", outCenteredCube);
+        scene.addMesh("texturedCube", texturedCube);
+        scene.addMesh("texturedSphere", texturedSphere);
 
         Texture texturedCubeTexture = new Texture("obj model\\texture\\textureTest1.png");
         Texture photoTexture = new Texture("obj model\\texture\\photo.png");
-        this.scene.addTexture("texturedCubeTexture",texturedCubeTexture);
-        this.scene.addTexture("photoTexture",photoTexture);
+        scene.addTexture("texturedCubeTexture",texturedCubeTexture);
+        scene.addTexture("photoTexture",photoTexture);
 
 
         PointLight sun1 = new PointLight(
@@ -74,16 +74,20 @@ public class FirstGameTest extends GameEngine {
 
 
 
-        this.scene.addGameObject("axis1",   new GameObject(axis, ColorUtils.BLUE));
+        scene.addGameObject("axis1",   new GameObject(axis, ColorUtils.BLUE));
         scene.getGameObject("axis1").setPosition(0, 0, 0);
         scene.getGameObject("axis1").setScale(-0.3f, 0.3f, 0.3f);
 
 
-        this.scene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
-        scene.getGameObject("texturedCube").setRotation(45, 45, 45);;
+        scene.addGameObject("texturedCube", new GameObject(texturedCube,texturedCubeTexture));
+        scene.getGameObject("texturedCube").setRotation(45, 45, 45);
 
+//        scene.addGameObject("photoTexture", new GameObject(texturedCube,photoTexture));
+//        scene.getGameObject("photoTexture").setRotation(45, 45, 45);
+//        scene.getGameObject("photoTexture").setPosition(10, 10, 10);
+//        scene.getGameObject("photoTexture").setScale(1, 1, 1);
 
-        this.scene.addGameObject("teapot1", new GameObject(teapot, ColorUtils.YELLOW));
+        scene.addGameObject("teapot1", new GameObject(teapot, ColorUtils.YELLOW));
         GameObject t1 = scene.getGameObject("teapot1");
         t1.setPosition(35, 0, 8);
 //        t1.setPosition(0, 0, 0);
@@ -98,7 +102,8 @@ public class FirstGameTest extends GameEngine {
         if (graphicEngineContext.getBenchmarkRunningState() == BenchmarkManager.State.MEASURING) {
             this.graphicEngineContext.getBenchmarkManager().updateBenchmarkScene();
         } else {
-            camera.getCameraSpot().setOn(graphicEngineContext.isCameraSpotOn());
+            Scene scene =  this.graphicEngineContext.getCurrentScene();
+            scene.getMainCamera().getCameraSpot().setOn(graphicEngineContext.isCameraSpotOn());
 
             angleTheta += 0.07;
             anglePhi += 0.01;
@@ -121,7 +126,7 @@ public class FirstGameTest extends GameEngine {
     }
 
     public static void main(String[] args) {
-        FirstGameTest game1 = new FirstGameTest(800 ,600);
+        FirstGame game1 = new FirstGame(800 ,600);
         game1.start();
     }
 }

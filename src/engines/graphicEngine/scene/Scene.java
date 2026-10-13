@@ -1,13 +1,13 @@
 package engines.graphicEngine.scene;
 
+import engines.graphicEngine.core.GraphicEngineContext;
+import engines.graphicEngine.io.userInput.CameraController;
 import engines.graphicEngine.math.geometry.Mesh;
 import engines.graphicEngine.math.geometry.Triangle;
-import engines.graphicEngine.math.tools.Matrix;
 import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Texture;
 import engines.graphicEngine.scene.lightRelative.PointLight;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,7 +16,8 @@ import java.util.Map;
 public class Scene {
     public record ObjectData(String name, String meshName) {}
 
-    private Camera camera;
+    private Camera mainCamera;
+    private CameraController cameraController;
 
     private final Map<String, Mesh> meshLibrary;
     private final Map<String, Texture> textureLibrary;
@@ -31,7 +32,7 @@ public class Scene {
     private Triangle[] globalPool;
     private int totalTriangles = 0;
 
-    public Scene() {
+    public Scene(GraphicEngineContext graphicEngineContext) {
         this.meshLibrary = new HashMap<>();
         this.textureLibrary = new HashMap<>();
 
@@ -40,6 +41,13 @@ public class Scene {
 
         this.lightDirectory = new HashMap<>();
         this.lightQueue = new ArrayList<>();
+
+        this.mainCamera = new Camera(graphicEngineContext);
+        this.addLight("cameraSpotLight", mainCamera.getCameraSpot());
+
+        this.cameraController = new CameraController(mainCamera, graphicEngineContext);
+
+        graphicEngineContext.setCurrentScene(this);
     }
 
     public Triangle[] getGlobalOriginals() { return globalOriginals; }
@@ -150,11 +158,19 @@ public class Scene {
         return lightQueue;
     }
 
-    public Camera getCamera() {
-        return camera;
+    public Camera getMainCamera() {
+        return mainCamera;
     }
 
-    public void setCamera(Camera camera) {
-        this.camera = camera;
+    public void setMainCamera(Camera mainCamera) {
+        this.mainCamera = mainCamera;
+    }
+
+    public CameraController getCameraController() {
+        return cameraController;
+    }
+
+    public void setCameraController(CameraController cameraController) {
+        this.cameraController = cameraController;
     }
 }

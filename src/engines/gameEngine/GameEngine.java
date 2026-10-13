@@ -3,6 +3,7 @@ package engines.gameEngine;
 import engines.graphicEngine.core.BenchmarkManager;
 import engines.graphicEngine.core.GraphicEngine;
 import engines.graphicEngine.core.GraphicEngineContext;
+import engines.graphicEngine.io.userInput.CameraController;
 import engines.graphicEngine.io.userInput.InputManager;
 import engines.graphicEngine.overlay.HeadUpDisplay;
 import engines.graphicEngine.renderer.Camera;
@@ -17,8 +18,6 @@ public abstract class GameEngine implements Runnable {
 
     protected final GraphicEngineContext graphicEngineContext;
     protected final GraphicEngine graphicEngine;
-    protected final Scene scene;
-    protected final Camera camera;
     protected final InputManager inputManager;
 
     protected final Pipeline pipeline;
@@ -36,15 +35,11 @@ public abstract class GameEngine implements Runnable {
             this.graphicEngine = new GraphicEngine(width, height);
             this.graphicEngineContext = graphicEngine.getGraphicEngineContext();
 
-            this.scene = new Scene();
-            this.camera = new Camera(graphicEngine.getGraphicEngineContext());
+            this.inputManager = new InputManager(this.graphicEngine);
 
-            this.inputManager = new InputManager(this.graphicEngine, this.camera);
-
-            this.pipeline = new Pipeline(this.camera, this.scene, this.graphicEngineContext);
+            this.pipeline = new Pipeline(this.graphicEngineContext);
             this.hud = new HeadUpDisplay(this.graphicEngineContext);
             this.benchmarkManager = new BenchmarkManager(this.graphicEngineContext, this.pipeline);
-            this.graphicEngineContext.setBenchmarkManager(this.benchmarkManager);
         long endEngineConstruct = System.nanoTime();
         System.out.printf("-> [PROFILE] Sub GameEngine systems allocated in %.2f ms%n",
                 (endEngineConstruct - startEngineConstruct) / 1_000_000.0);
@@ -116,6 +111,8 @@ public abstract class GameEngine implements Runnable {
         long previousTimeFrame = startTime;
 
         while (graphicEngineContext.isRunning()) {
+            Camera currentCamera =  this.graphicEngineContext.getCurrentScene().getMainCamera();
+
             long currentTimeFrame = System.nanoTime();
             double currentFrameDuration = (currentTimeFrame - previousTimeFrame) / 1_000_000_000.0;
             graphicEngineContext.setCurrentFrameDuration(currentFrameDuration);
@@ -143,9 +140,7 @@ public abstract class GameEngine implements Runnable {
                 if (!graphicEngineContext.isRunning()) {
                     break;
                 }
-                this.graphicEngine.render(this.camera, this.pipeline, this.hud);
-
-
+                this.graphicEngine.render(this.pipeline, this.hud);
 
                 currentFPS++;
                 graphicEngineContext.incrementElapsedFrame();
@@ -153,7 +148,7 @@ public abstract class GameEngine implements Runnable {
 
             if (System.currentTimeMillis() - timer > 1000) {
                 timer += 1000;
-                System.out.println(camera.getCameraPosition().toString());
+                System.out.println(currentCamera.getCameraPosition().toString());
                 graphicEngineContext.setCurrentUPS(currentUPS);
                 graphicEngineContext.setCurrentFPS(currentFPS);
                 currentUPS = 0;
@@ -165,9 +160,14 @@ public abstract class GameEngine implements Runnable {
 
     private void update() {
         inputManager.processInputs();
-        camera.updateWindowProjectionMatrix();
-        camera.updateCamReferentialMatrix();
-        camera.updateProjectionMatrix();
+
+        this.graphicEngineContext.getCurrentScene().getCameraController().update();
+
+        Camera currentCamera =  this.graphicEngineContext.getCurrentScene().getMainCamera();
+        currentCamera.updateWindowProjectionMatrix();
+        currentCamera.updateCamReferentialMatrix();
+        currentCamera.updateProjectionMatrix();
+
 
         this.updateGameLogic();
 

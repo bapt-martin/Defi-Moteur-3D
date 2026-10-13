@@ -22,8 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static engines.graphicEngine.renderer.Rasterizer.*;
 
 public class Pipeline {
-    private final Camera camera;
-    private Scene scene;
     private final GraphicEngineContext graphicEngineContext;
 
     private Matrix viewMatrix;
@@ -118,12 +116,10 @@ public class Pipeline {
         }
     }
 
-    public Pipeline(Camera camera, Scene scene, GraphicEngineContext graphicEngineContext) {
-        this.camera = camera;
-        this.scene = scene;
+    public Pipeline(GraphicEngineContext graphicEngineContext) {
         this.graphicEngineContext = graphicEngineContext;
         this.depthBuffer = new float[graphicEngineContext.getWindowHeight() * graphicEngineContext.getWindowWidth()];
-        this.updateViewMatrix();
+//        this.updateViewMatrix(currentScene);
         this.postGeometryPassTriangles = new ArrayList<>();
         this.trianglesReadyToRender = new ArrayList<>();
 
@@ -135,14 +131,14 @@ public class Pipeline {
         this.profilerRawData = new PipelineProfilerRawData();
     }
 
-    public void execution(int[] pixels) {
+    public void execution(int[] pixels, Scene currentScene) {
         long execStart = System.nanoTime();
-            this.updateViewMatrix();
+            this.updateViewMatrix(currentScene);
             this.clearDepthBuffer();
-            this.updateGeometryProcessingQueue();
+            this.updateGeometryProcessingQueue(currentScene);
 
             long startTime = System.nanoTime();
-                this.processAllGeometryMultiThreaded();
+                this.processAllGeometryMultiThreaded(currentScene);
         //        this.processAllGeometry();
             long endTime = System.nanoTime();
             profilerRawData.geometryPassTotalDurationNs += (endTime - startTime);
@@ -173,11 +169,11 @@ public class Pipeline {
         }
     }
 
-    public void updateViewMatrix() {
-        this.viewMatrix = Matrix.createViewMatrix(this.camera.getCameraPosition(), this.camera.getCameraDirection(), this.camera.getCameraUp());
+    public void updateViewMatrix(Scene scene) {
+        this.viewMatrix = Matrix.createViewMatrix(scene.getMainCamera().getCameraPosition(), scene.getMainCamera().getCameraDirection(), scene.getMainCamera().getCameraUp());
     }
 
-    public void updateGeometryProcessingQueue() {
+    public void updateGeometryProcessingQueue(Scene scene) {
         int requiredCapacity = 0;
         for (GameObject obj : scene.getRenderQueue()) {
             if (obj.isRendered()) {
@@ -191,7 +187,7 @@ public class Pipeline {
         }
     }
 
-    public void processAllGeometryMultiThreaded() {
+    public void processAllGeometryMultiThreaded(Scene scene) {
         this.postGeometryPassTriangles.clear();
         this.activeTriangleCount = 0;
 
@@ -211,10 +207,10 @@ public class Pipeline {
 
         if (this.activeTriangleCount == 0) return;
 
-        Matrix projectionMatrix = this.camera.getProjectionMatrix();
+        Matrix projectionMatrix = scene.getMainCamera().getProjectionMatrix();
 
-        Plane frontClippingPlane = camera.getCameraFrontClippingPlane();
-        Plane farClippingPlane = camera.getCameraFarClippingPlane();
+        Plane frontClippingPlane = scene.getMainCamera().getCameraFrontClippingPlane();
+        Plane farClippingPlane = scene.getMainCamera().getCameraFarClippingPlane();
 
         List<PointLight> lightQueue = scene.getLightQueue();
 
@@ -249,7 +245,7 @@ public class Pipeline {
                             pooledTri.getParentTriangle().transformInPool(worldTransformMatrix, pooledTri);
 
                             boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
-                            if (!isFacing(this.camera, isFlipped, pooledTri)) {
+                            if (!isFacing(scene.getMainCamera(), isFlipped, pooledTri)) {
                                 continue;
                             }
 
@@ -305,14 +301,14 @@ public class Pipeline {
         }
     }
 
-    public void processAllGeometry() {
+    public void processAllGeometry(Scene scene) {
         this.postGeometryPassTriangles.clear();
         this.activeTriangleCount = 0;
 
-        Matrix projectionMatrix = this.camera.getProjectionMatrix();
+        Matrix projectionMatrix = scene.getMainCamera().getProjectionMatrix();
 
-        Plane frontClippingPlane = camera.getCameraFrontClippingPlane();
-        Plane farClippingPlane = camera.getCameraFarClippingPlane();
+        Plane frontClippingPlane = scene.getMainCamera().getCameraFrontClippingPlane();
+        Plane farClippingPlane = scene.getMainCamera().getCameraFarClippingPlane();
 
         List<GameObject> renderQueue = scene.getRenderQueue();
 
@@ -323,11 +319,11 @@ public class Pipeline {
                 continue;
             }
 
-            this.processGameObject(projectionMatrix, frontClippingPlane, farClippingPlane, lightQueue, gameObject);
+            this.processGameObject(scene, projectionMatrix, frontClippingPlane, farClippingPlane, lightQueue, gameObject);
         }
     }
 
-    public void processGameObject(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, GameObject gameObject) {
+    public void processGameObject(Scene scene, Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, GameObject gameObject) {
         Matrix worldTransformMatrix = gameObject.getWorldTransformMatrix();
         int baseColor = gameObject.getBasedColor();
         Texture texture = gameObject.getTexture();
@@ -337,18 +333,18 @@ public class Pipeline {
 
         int size = gameObjectTriangles.size();
         for (int i=0; i<size; i++) {
-            this.processTriangle(projectionMatrix, frontClippingPlane, farClippingPlane, lightQueue, worldTransformMatrix, gameObjectTriangles.get(i), gameObjectPoolTriangles[i], texture, baseColor);
+            this.processTriangle(scene, projectionMatrix, frontClippingPlane, farClippingPlane, lightQueue, worldTransformMatrix, gameObjectTriangles.get(i), gameObjectPoolTriangles[i], texture, baseColor);
         }
     }
 
-    public void processTriangle(Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, Matrix worldTransformMatrix, Triangle triMeshClean, Triangle pooledTri, Texture texture, int baseColor) { //Backface Culling
+    public void processTriangle(Scene scene, Matrix projectionMatrix, Plane frontClippingPlane, Plane farClippingPlane, List<PointLight> lightQueue, Matrix worldTransformMatrix, Triangle triMeshClean, Triangle pooledTri, Texture texture, int baseColor) { //Backface Culling
 ////        pooledTri = triMeshClean.transformed(worldTransformMatrix, baseColor, texture);
 
         triMeshClean.transformInPool(worldTransformMatrix, pooledTri);
 
         boolean isFlipped = worldTransformMatrix.getDeterminant() < 0;
 
-        if (!isFacing(this.camera, isFlipped, pooledTri)) {
+        if (!isFacing(scene.getMainCamera(), isFlipped, pooledTri)) {
             return;
         }
 
@@ -622,13 +618,5 @@ public class Pipeline {
 
     public void setPreGeometryPassTriangles(Triangle[] preGeometryPassTriangles) {
         this.preGeometryPassTriangles = preGeometryPassTriangles;
-    }
-
-    public void setScene(Scene scene) {
-        this.scene = scene;
-    }
-
-    public Scene getScene() {
-        return scene;
     }
 }

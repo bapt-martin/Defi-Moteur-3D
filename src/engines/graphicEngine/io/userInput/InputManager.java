@@ -12,7 +12,6 @@ import java.awt.event.*;
 
 public class InputManager {
     private final GraphicEngineContext graphicEngineContext;
-    private final Camera camera;
     private final KeyboardInput keyboardInput;
     private final MouseInput mouseInput;
     private final MouseMotionInput mouseMotionInput;
@@ -20,16 +19,18 @@ public class InputManager {
     private Robot robot;
     private Point lastRobotPos = new Point(0, 0);
     private boolean isFirstMove = true;
-    double accumulatedDeltaX = 0;
-    double accumulatedDeltaY = 0;
+
+    public double accumulatedDeltaX = 0;
+    public double accumulatedDeltaY = 0;
+    public double accumulatedScroll = 0;
 
     private boolean isHUDTogglePreviously = false;
     private boolean isBenchmarkTogglePreviously = false;
     private boolean isCameraSpotPressedPreviously = false;
 
-    public InputManager(GraphicEngine graphicEngine, Camera camera) {
+    public InputManager(GraphicEngine graphicEngine) {
         this.graphicEngineContext = graphicEngine.getGraphicEngineContext();
-        this.camera = camera;
+        this.graphicEngineContext.setInputManager(this);
         this.keyboardInput = new KeyboardInput(this);
         this.mouseInput = new MouseInput(graphicEngine, this);
         this.mouseMotionInput = new MouseMotionInput(graphicEngineContext,this);
@@ -103,106 +104,13 @@ public class InputManager {
     }
 
     public void processInputs() {
-        double frameTimeReference = 1.0 / graphicEngineContext.getUPS_TARGET();
-        double translationCameraSpeed = camera.getdTranslationCameraSpeed();
-        double rotationCameraSpeed = camera.getdRotationCameraSpeed();
-
-        this.handleTranslation(frameTimeReference, translationCameraSpeed);
-        this.handleRotation(frameTimeReference, rotationCameraSpeed);
-        this.applyMouseRotation(frameTimeReference, rotationCameraSpeed);
-
         this.toggleBenchmarkMode();
         this.toggleHUD();
         this.toggleCameraSpotlight();
     }
 
-    public void handleTranslation(double deltaFrameTime, double translationCameraSpeed) {
-        double xDir = 0; // Strafe
-        double zDir = 0; // Forward
-        double yDir = 0; // Fly
-
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_Z]) zDir += 1; // Forward
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_S]) zDir -= 1; // Backward
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_Q]) xDir -= 1; // Left strafe
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_D]) xDir += 1; // Right strafe
-
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_SPACE]) {
-            if (keyboardInput.getKeysPressed()[KeyEvent.VK_SHIFT]) {
-                yDir -= 1; // Down
-            } else {
-                yDir += 1; // Up
-            }
-        }
-
-        if (xDir == 0 && yDir == 0 && zDir == 0) return;
-
-        Vector3D moveX = new Vector3D(camera.getCameraRight());
-        moveX.scaleInPlace(xDir);
-
-        Vector3D moveY = new Vector3D(camera.getCameraUp());
-        moveY.scaleInPlace(yDir);
-
-        Vector3D moveZ = new Vector3D(camera.getCameraDirection());
-        moveZ.scaleInPlace(zDir);
-        
-        Vector3D totalTranslation = moveX.add(moveZ).add(moveY);
-        totalTranslation.normalizeInPlace();
-
-        camera.translateCameraInPlace(totalTranslation, 1, translationCameraSpeed, deltaFrameTime);
-    }
-
-    public void handleRotation(double deltaFrameTime, double rotationCameraSpeed) {
-        this.handlePitch(deltaFrameTime, rotationCameraSpeed);
-        this.handleYaw(deltaFrameTime, rotationCameraSpeed);
-        this.handleRoll(deltaFrameTime, rotationCameraSpeed);
-    }
-
-    public void handlePitch(double deltaFrameTime, double rotationCameraSpeed) {
-        // UP = Anti-Clockwise X-Axis rotation Pitch
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_UP]) {
-            camera.setCamPitch(camera.getCamPitch() - rotationCameraSpeed * deltaFrameTime);
-        }
-
-        // DOWN = Clockwise X-Axis rotation Pitch
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_DOWN]) {
-            camera.setCamPitch(camera.getCamPitch() + rotationCameraSpeed * deltaFrameTime);
-        }
-    }
-
-    public void handleYaw(double deltaFrameTime, double rotationCameraSpeed) {
-        // RIGHT = Anti-Clockwise Y-Axis rotation Yaw
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_RIGHT]) {
-            camera.setCamYaw(camera.getCamYaw() + rotationCameraSpeed * deltaFrameTime);
-        }
-
-        // LEFT = Clockwise Y-Axis rotation Yaw
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_LEFT]) {
-            camera.setCamYaw(camera.getCamYaw() - rotationCameraSpeed * deltaFrameTime);
-        }
-    }
-
-    public void handleRoll(double deltaFrameTime, double rotationCameraSpeed) {
-        // A = Anti-Clockwise Z-Axis rotation Roll
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_A]) {
-            camera.setCamRoll(camera.getCamRoll() + rotationCameraSpeed * deltaFrameTime);
-        }
-
-        // E = Clockwise Y-Axis rotation Roll
-        if (keyboardInput.getKeysPressed()[KeyEvent.VK_E]) {
-            camera.setCamRoll(camera.getCamRoll() - rotationCameraSpeed * deltaFrameTime);
-        }
-    }
-
-    private synchronized void applyMouseRotation(double deltaFrameTime, double rotationCameraSpeed) {
-        if (this.accumulatedDeltaX != 0 || this.accumulatedDeltaY != 0) {
-            double sensitivity = mouseMotionInput.getMouseSensitivity();
-
-            camera.setCamYaw(camera.getCamYaw() + rotationCameraSpeed * this.accumulatedDeltaX * sensitivity);
-            camera.setCamPitch(camera.getCamPitch() + rotationCameraSpeed * this.accumulatedDeltaY * sensitivity);
-
-            this.accumulatedDeltaX = 0;
-            this.accumulatedDeltaY = 0;
-        }
+    public boolean isKeyPressed(int keyCode) {
+        return keyboardInput.getKeysPressed()[keyCode];
     }
 
     public synchronized void handleMouseMoving(MouseEvent e) {
@@ -238,7 +146,10 @@ public class InputManager {
     }
 
     public void handleMouseWheelInput(MouseWheelEvent e) {
-        camera.setZoom(camera.getZoom() - e.getWheelRotation() * camera.getZoomFactor());
-        System.out.println(camera.getZoom());
+        this.accumulatedScroll += e.getWheelRotation();
+    }
+
+    public MouseMotionInput getMouseMotionInput() {
+        return mouseMotionInput;
     }
 }

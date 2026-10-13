@@ -3,6 +3,7 @@ package engines.graphicEngine.core;
 import engines.graphicEngine.overlay.HeadUpDisplay;
 import engines.graphicEngine.renderer.Camera;
 import engines.graphicEngine.renderer.Pipeline;
+import engines.graphicEngine.scene.Scene;
 
 import java.awt.*;
 import java.awt.image.BufferStrategy;
@@ -34,19 +35,20 @@ public class GraphicEngine extends Canvas {
         this.createBufferStrategy(3);
     }
 
-    public void render(Camera camera, Pipeline pipeline, HeadUpDisplay hud) {
+    public void render(Pipeline pipeline, HeadUpDisplay hud) {
         if (this.getBufferStrategy() == null) return;
-
+        Scene scene = graphicEngineContext.getCurrentScene();
         this.checkAndResizeBuffer();
 
         java.util.Arrays.fill(pixels, this.getBackground().getRGB());
 
+        Camera camera = scene.getMainCamera();
         camera.updateWindowProjectionMatrix();
         camera.updateProjectionMatrix();
 
         graphicEngineContext.resetCurrentFrameRenderedTriangleCount();
 
-        pipeline.execution(pixels);
+        pipeline.execution(pixels, scene);
 
         BufferStrategy bs = this.getBufferStrategy();
         Graphics g = bs.getDrawGraphics();

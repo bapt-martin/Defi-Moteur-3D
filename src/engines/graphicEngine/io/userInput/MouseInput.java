@@ -49,6 +49,6 @@ public class MouseInput implements MouseListener, MouseWheelListener {
 
     @Override
     public void mouseWheelMoved(MouseWheelEvent e) {
-        inputManager.handleMouseWheelInput(e);
+//        inputManager.handleMouseWheelInput(e);
     }
 }

@@ -122,7 +122,7 @@ public class HeadUpDisplay {
     }
 
     public void updatePosition() {
-        Vertex3D cameraPosition = graphicEngineContext.getCamera().getCameraPosition();
+        Vertex3D cameraPosition = graphicEngineContext.getCurrentScene().getMainCamera().getCameraPosition();
         this.positionText = String.format("Pos: [X:%.1f Y:%.1f Z:%.1f]",
                 cameraPosition.getX(),
                 cameraPosition.getY(),
@@ -131,7 +131,7 @@ public class HeadUpDisplay {
     }
 
     public void updateRotation() {
-        Camera.CameraRotation cameraRotation = graphicEngineContext.getCamera().getCameraRotation();
+        Camera.CameraRotation cameraRotation = graphicEngineContext.getCurrentScene().getMainCamera().getCameraRotation();
 
         double deg = (180 / Math.PI)   ;
         this.rotationText = String.format("Rot: [Y:%.1f P:%.1f R:%.1f]",

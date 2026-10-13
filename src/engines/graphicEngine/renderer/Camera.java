@@ -8,8 +8,6 @@ import engines.graphicEngine.math.tools.Vector3D;
 import engines.graphicEngine.math.geometry.Vertex3D;
 import engines.graphicEngine.scene.lightRelative.SpotLight;
 
-import java.awt.*;
-
 public class Camera {
     private GraphicEngineContext graphicEngineContext;
 
@@ -28,19 +26,16 @@ public class Camera {
     private double far;
     private double fov;
 
-    private double dTranslationCameraSpeed = 20;
-    private double dRotationCameraSpeed = 0.5;
+    private double translationCameraSpeed = 20;
+    private double rotationCameraSpeed = 0.5;
 
     private double zoom;
     private double zoomFactor;
 
 
+
     public Camera(GraphicEngineContext graphicEngineContext) {
         this.graphicEngineContext = graphicEngineContext;
-
-        graphicEngineContext.setCamera(this);
-
-        graphicEngineContext.setCamera(this);
 
         this.cameraPosition = new Vertex3D(0, 0, 0);
         this.cameraRotation = new CameraRotation(0, 0, 0);
@@ -59,7 +54,7 @@ public class Camera {
 
         this.cameraSpot = new SpotLight(
                 new Vector3D(0, 0, 0),
-                0.005,
+                0.005f,
                 ColorUtils.WHITE,
                 new Vector3D(0, 0, 1),
                 30
@@ -223,12 +218,12 @@ public class Camera {
         return new Matrix(projectionMatrix);
     }
 
-    public double getdTranslationCameraSpeed() {
-        return dTranslationCameraSpeed;
+    public double getTranslationCameraSpeed() {
+        return translationCameraSpeed;
     }
 
-    public double getdRotationCameraSpeed() {
-        return dRotationCameraSpeed;
+    public double getRotationCameraSpeed() {
+        return rotationCameraSpeed;
     }
 
     public double getZoom() {
@@ -261,6 +256,10 @@ public class Camera {
 
     public SpotLight getCameraSpot() {
         return cameraSpot;
+    }
+
+    public void setZoomFactor(double zoomFactor) {
+        this.zoomFactor = zoomFactor;
     }
 }
 
